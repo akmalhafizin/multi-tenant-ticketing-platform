@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ----------------------------------------------------------------------
+// ENUMS
+// ----------------------------------------------------------------------
+
+enum UserRole {
+  OWNER // first user / billing owner of the org
+  ADMIN
+  AGENT
+}
+
+enum TicketStatus {
+  OPEN
+  PENDING // waiting on customer
+  ON_HOLD
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AuthorType {
+  AGENT // staff member (User)
+  GUEST // anonymous submitter
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+// ----------------------------------------------------------------------
+// ORGANIZATION (TENANT)
+// ----------------------------------------------------------------------
+
+model Organization {
+  id   String @id @default(cuid())
+  name String
+
+  // public-facing slug used for the org's single ticket submission URL/QR
+  // e.g. https://yourapp.com/submit/{slug}
+  slug String @unique
+
+  // optional branding/config shown on the public submission form
+  welcomeMessage    String?
+  defaultCategoryId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users      User[]
+  tickets    Ticket[]
+  categories Category[]
+  invites    OrganizationInvite[]
+
+  defaultCategory Category? @relation("OrgDefaultCategory", fields: [defaultCategoryId], references: [id])
+  // NOTE: app code must verify defaultCategory.organizationId === this org's id
+  // when setting defaultCategoryId (Prisma can't compose a self-referential
+  // FK against another model's compound key here the way Ticket→Category does)
+
+  @@index([slug])
+}
+
+// ----------------------------------------------------------------------
+// STAFF USERS (logged-in side, scoped to one tenant)
+// ----------------------------------------------------------------------
+
+model User {
+  id             String   @id @default(cuid())
+  email          String
+  passwordHash   String // store a bcrypt/argon2 hash here — never plaintext. Hashing happens in app code before this is set.
+  name           String?
+  role           UserRole @default(AGENT)
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTickets Ticket[]     @relation("AssignedAgent")
+  comments        Comment[]
+
+  // email only needs to be unique *within* an org, not globally,
+  // since the same person could be an agent at two different tenants
+  @@unique([organizationId, email])
+  @@index([organizationId])
+}
+
+// ----------------------------------------------------------------------
+// ORGANIZATION INVITE
+// Onboarding flow: an admin/owner invites someone by email into their
+// org with a given role. The invitee clicks a tokenized link to accept
+// and create their User account (or link to an existing one).
+// ----------------------------------------------------------------------
+
+model OrganizationInvite {
+  id             String       @id @default(cuid())
+  organizationId String
+  email          String
+  role           UserRole     @default(AGENT)
+  token          String       @unique @default(cuid()) // sent in the invite link
+  status         InviteStatus @default(PENDING)
+
+  invitedByUserId String?
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Only one PENDING invite per email per org should exist at a time.
+  // A plain @@unique([organizationId, email, status]) would also block
+  // having multiple EXPIRED/REVOKED rows for the same email (i.e. invite
+  // history), so this is a partial unique index instead — enforce it via
+  // a raw SQL migration:
+  //
+  //   CREATE UNIQUE INDEX "one_pending_invite_per_email"
+  //   ON "OrganizationInvite" ("organizationId", "email")
+  //   WHERE "status" = 'PENDING';
+  //
+  // (Prisma's @@unique can't express a partial/filtered index — add this
+  // via `prisma migrate dev --create-only` and edit migration.sql.)
+  @@index([organizationId])
+  @@index([token])
+}
+
+// ----------------------------------------------------------------------
+// CATEGORY (optional but common: "Billing", "Technical", "General")
+// ----------------------------------------------------------------------
+
+model Category {
+  id             String @id @default(cuid())
+  organizationId String
+  name           String
+
+  organization       Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tickets            Ticket[]
+  orgsUsingAsDefault Organization[] @relation("OrgDefaultCategory")
+
+  // compound unique so Ticket can enforce "category must belong to the
+  // same org as the ticket" via a composite foreign key (see Ticket below)
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+// ----------------------------------------------------------------------
+// TICKET
+// ----------------------------------------------------------------------
+
+model Ticket {
+  id             String  @id @default(cuid())
+  organizationId String
+  categoryId     String?
+
+  title       String
+  description String?
+  status      TicketStatus   @default(OPEN)
+  priority    TicketPriority @default(MEDIUM)
+
+  // --- guest submitter info (NO LOGIN REQUIRED) ---
+  guestName  String?
+  guestEmail String?
+  guestPhone String?
+
+  // public tracking token so a guest can check status later without an account
+  // e.g. yourapp.com/track/{publicToken}
+  publicToken String @unique @default(cuid())
+
+  assignedAgentId String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // composite FK: enforces categoryId must belong to the SAME organizationId
+  // (Prisma can't express a same-row cross-field constraint any other way)
+  category      Category?    @relation(fields: [organizationId, categoryId], references: [organizationId, id])
+  assignedAgent User?        @relation("AssignedAgent", fields: [assignedAgentId], references: [id])
+
+  comments    Comment[]
+  attachments Attachment[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([guestEmail])
+  @@index([organizationId, categoryId])
+}
+
+// ----------------------------------------------------------------------
+// COMMENT / REPLY THREAD
+// Covers both agent replies and guest replies (e.g. via emailed magic link)
+// ----------------------------------------------------------------------
+
+model Comment {
+  id         String     @id @default(cuid())
+  ticketId   String
+  authorType AuthorType
+
+  // set when authorType = AGENT
+  userId String?
+
+  // set when authorType = GUEST
+  guestName  String?
+  guestEmail String?
+
+  body       String
+  isInternal Boolean  @default(false) // internal note, hidden from guest
+  createdAt  DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id])
+
+  // NOTE: Prisma's schema language has no CHECK constraint support, so the
+  // rule "authorType = AGENT requires userId, authorType = GUEST requires
+  // guestEmail" can't be declared here. Enforce it in BOTH places:
+  //   1. App-level validation (e.g. Zod) before every Comment.create
+  //   2. A DB-level CHECK constraint added via a raw SQL migration, e.g.:
+  //
+  //      ALTER TABLE "Comment" ADD CONSTRAINT "comment_author_consistency"
+  //      CHECK (
+  //        ("authorType" = 'AGENT' AND "userId" IS NOT NULL) OR
+  //        ("authorType" = 'GUEST' AND "guestEmail" IS NOT NULL)
+  //      );
+  //
+  //   Add this via `prisma migrate dev --create-only` and edit the
+  //   generated migration.sql to include it (Prisma won't generate it for you).
+
+  @@index([ticketId])
+}
+
+// ----------------------------------------------------------------------
+// ATTACHMENT (screenshots etc. submitted with a ticket/comment)
+// ----------------------------------------------------------------------
+
+model Attachment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  url       String
+  fileName  String
+  fileType  String?
+  fileSize  Int?
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
