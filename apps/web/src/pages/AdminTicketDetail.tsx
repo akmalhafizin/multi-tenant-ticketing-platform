@@ -118,6 +118,14 @@ export default function AdminTicketDetail() {
   const canAssign = true // Will be permission-checked later against role
   const hasGuestEmail = !!ticket.guestEmail
 
+  // Compute resolution time and SLA
+  const resolutionTime = ticket.resolvedAt
+    ? Math.round((new Date(ticket.resolvedAt).getTime() - new Date(ticket.createdAt).getTime()) / (1000 * 60 * 60))
+    : null
+  const currentAge = Math.round((Date.now() - new Date(ticket.createdAt).getTime()) / (1000 * 60 * 60))
+  const slaHoursSetting = 24 // fallback, will come from org settings later
+  const slaPercent = slaHoursSetting > 0 ? Math.min(100, Math.round((currentAge / slaHoursSetting) * 100)) : 0
+
   return (
     <div className="max-w-6xl mx-auto">
       {/* Back */}
@@ -211,8 +219,18 @@ export default function AdminTicketDetail() {
           <PriorityBadge priority={priorityMap[ticket.priority] || 'medium'} />
         </div>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Last Updated</p>
-          <p className="text-sm font-semibold text-gray-900">{new Date(ticket.updatedAt).toLocaleString()}</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Resolution Time</p>
+          {resolutionTime !== null ? (
+            <p className="text-sm font-semibold text-gray-900">{resolutionTime}h</p>
+          ) : (
+            <div>
+              <p className="text-sm font-semibold text-gray-900">{currentAge}h elapsed</p>
+              <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden w-20">
+                <div className={`h-full rounded-full ${slaPercent > 100 ? 'bg-red-500' : slaPercent > 80 ? 'bg-amber-500' : 'bg-green-500'}`}
+                  style={{ width: `${Math.min(slaPercent, 100)}%` }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

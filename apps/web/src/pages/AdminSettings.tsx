@@ -7,6 +7,7 @@ interface OrgSettings {
   slug: string
   welcomeMessage: string | null
   defaultCategoryId: string | null
+  resolutionSlaHours: number | null
 }
 
 interface Category {
@@ -27,6 +28,7 @@ export default function AdminSettings() {
   const [slug, setSlug] = useState('')
   const [welcomeMessage, setWelcomeMessage] = useState('')
   const [defaultCategoryId, setDefaultCategoryId] = useState('')
+  const [slaHours, setSlaHours] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -41,6 +43,7 @@ export default function AdminSettings() {
         setSlug(o.slug)
         setWelcomeMessage(o.welcomeMessage || '')
         setDefaultCategoryId(o.defaultCategoryId || '')
+        setSlaHours(o.resolutionSlaHours ? String(o.resolutionSlaHours) : '')
         setCategories(catRes.data)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load settings')
@@ -65,6 +68,7 @@ export default function AdminSettings() {
           slug: slug.trim(),
           welcomeMessage: welcomeMessage.trim(),
           defaultCategoryId: defaultCategoryId || null,
+          resolutionSlaHours: slaHours ? parseInt(slaHours) : null,
         }),
       })
       setOrg(res.data)
@@ -150,6 +154,21 @@ export default function AdminSettings() {
             <p className="text-xs text-gray-400 mt-1">
               Your public submission form will be at{' '}
               <span className="font-mono text-red-600">{slug || '{slug}'}.lvh.me/report</span>
+            </p>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-600">
+              Resolution SLA (hours)
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={slaHours}
+              onChange={(e) => setSlaHours(e.target.value)}
+              placeholder="e.g. 24"
+              className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-1 focus:ring-red-600 focus:border-red-600 outline-none text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Target time to resolve tickets. Shows as SLA progress on ticket details.
             </p>
           </div>
         </div>

@@ -54,6 +54,11 @@ export default function TrackTicket() {
   const [replyBody, setReplyBody] = useState('')
   const [replying, setReplying] = useState(false)
 
+  // Rating
+  const [rating, setRating] = useState(0)
+  const [ratingSubmitted, setRatingSubmitted] = useState(false)
+  const [ratingSubmitting, setRatingSubmitting] = useState(false)
+
   useEffect(() => {
     if (!publicToken) return
     async function load() {
@@ -125,6 +130,31 @@ export default function TrackTicket() {
   }
 
   const isClosed = ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+  const isResolved = ticket.status === 'RESOLVED'
+
+  async function handleRate(star: number) {
+    if (ratingSubmitted || ratingSubmitting) return
+    setRatingSubmitting(true)
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const slug = extractSlugFromHost()
+      if (slug) headers['X-Org-Slug'] = slug
+
+      const res = await fetch(`${API_BASE}/api/tickets/rate/${publicToken}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ rating: star }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to submit rating')
+      setRating(star)
+      setRatingSubmitted(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit rating')
+    } finally {
+      setRatingSubmitting(false)
+    }
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -198,6 +228,40 @@ export default function TrackTicket() {
           </div>
         )}
       </div>
+
+      {/* Rating Section — shown when ticket is RESOLVED */}
+      {isResolved && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+          {ratingSubmitted ? (
+            <div className="text-center">
+              <span className="material-symbols-outlined text-4xl text-red-600 mb-2" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+              <h2 className="text-lg font-bold text-gray-900 mb-1">Thank You!</h2>
+              <p className="text-sm text-gray-500">Your rating of {rating}/5 has been submitted.</p>
+            </div>
+          ) : (
+            <>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Rate Your Experience</h2>
+              <p className="text-sm text-gray-600 mb-4">Your ticket has been resolved. How would you rate the support you received?</p>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => handleRate(star)}
+                    disabled={ratingSubmitting}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-all ${
+                      star <= rating ? 'text-red-600 scale-110' : 'text-gray-300 hover:text-red-400 hover:scale-105'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      {star <= rating ? 'star' : 'star'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Reply Form */}
       {!isClosed ? (
