@@ -128,7 +128,6 @@ export default function AdminUsers() {
   function showSuccess(msg: string) {
     setSuccessMsg(msg)
     setError('')
-    setTimeout(() => setSuccessMsg(''), 4000)
   }
 
   const isOwner = currentUser?.role === 'OWNER'
@@ -177,6 +176,41 @@ export default function AdminUsers() {
         </button>
       </div>
 
+      {successMsg && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-base mt-0.5">check_circle</span>
+            <div className="flex-1 min-w-0">
+              {successMsg.startsWith('Invite sent!') ? (
+                <>
+                  <p className="font-medium mb-2">Invite created! Share this link with your new team member:</p>
+                  <div className="flex items-center gap-2 bg-white border border-green-300 rounded-lg p-2">
+                    <span className="text-xs font-mono text-gray-700 truncate flex-1 select-all">{successMsg.replace('Invite sent! Link: ', '')}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(successMsg.replace('Invite sent! Link: ', ''))
+                        const btn = document.getElementById('copy-btn')
+                        if (btn) btn.textContent = 'Copied!'
+                      }}
+                      id="copy-btn"
+                      className="shrink-0 px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700 transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <span className="break-all">{successMsg}</span>
+              )}
+            </div>
+            <button onClick={() => setSuccessMsg('')} className="text-green-500 hover:text-green-700 shrink-0">
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Banner */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex items-start gap-3">
           <span className="material-symbols-outlined text-base mt-0.5">error</span>
@@ -184,13 +218,6 @@ export default function AdminUsers() {
           <button onClick={() => setError('')} className="ml-auto text-red-500 hover:text-red-700">
             <span className="material-symbols-outlined text-base">close</span>
           </button>
-        </div>
-      )}
-
-      {successMsg && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg flex items-start gap-3">
-          <span className="material-symbols-outlined text-base mt-0.5">check_circle</span>
-          <span className="break-all">{successMsg}</span>
         </div>
       )}
 
