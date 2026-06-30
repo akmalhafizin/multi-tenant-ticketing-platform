@@ -63,6 +63,7 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   users      User[]
+  roles      Role[]
   tickets    Ticket[]
   categories Category[]
   invites    OrganizationInvite[]
@@ -76,20 +77,50 @@ model Organization {
 }
 
 // ----------------------------------------------------------------------
+// CUSTOM ROLE (RBAC)
+// ----------------------------------------------------------------------
+
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false) // system roles (Owner/Admin/Agent) cannot be deleted
+
+  // Permissions stored as JSON:
+  // {
+  //   "pages": { "dashboard":true, "tickets":true, "categories":false, "users":false, "roles":false, "settings":false, "reports":false },
+  //   "tickets": { "view":true, "create":true, "assign":false, "close":false, "delete":false, "reply":true }
+  // }
+  permissions Json     @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        User[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+// ----------------------------------------------------------------------
 // STAFF USERS (logged-in side, scoped to one tenant)
 // ----------------------------------------------------------------------
 
 model User {
   id             String   @id @default(cuid())
   email          String
-  passwordHash   String // store a bcrypt/argon2 hash here — never plaintext. Hashing happens in app code before this is set.
+  passwordHash   String
   name           String?
   role           UserRole @default(AGENT)
+  roleId         String?  // custom RBAC role (optional, falls back to enum role)
   organizationId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roleRef         Role?        @relation(fields: [roleId], references: [id])
   assignedTickets Ticket[]     @relation("AssignedAgent")
   comments        Comment[]
 

@@ -91,6 +91,21 @@ async function main() {
   }
   console.log(`  ✓ ${categories.length} categories created`);
 
+  // ── Default Roles ────────────────────────────────────────────
+  const roleService = require("../services/roleService");
+  const roles = await roleService.seedDefaults(org.id);
+  console.log(`  ✓ ${roles.length} default roles created (Owner, Admin, Agent)`);
+
+  // Link existing users to their matching role
+  for (const role of roles) {
+    const targetRole = role.name.toUpperCase();
+    await prisma.user.updateMany({
+      where: { organizationId: org.id, role: targetRole },
+      data: { roleId: role.id },
+    });
+  }
+  console.log(`  ✓ Users linked to their default roles`);
+
   console.log("\n✅  Seed complete!\n");
   console.log("  ┌──────────────────────────────┬──────────────┐");
   console.log("  │ Email                        │ Password     │");

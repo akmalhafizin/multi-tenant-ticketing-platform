@@ -9,6 +9,7 @@ const userRoutes = require("./routes/user");
 const ticketRoutes = require("./routes/ticket");
 const orgRoutes = require("./routes/org");
 const inviteRoutes = require("./routes/invite");
+const roleRoutes = require("./routes/role");
 const { resolveTenant } = require("./middleware/tenant");
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/org", orgRoutes);
 app.use("/api/invites", inviteRoutes);
+app.use("/api/roles", roleRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────
 app.use((err, req, res, next) => {
