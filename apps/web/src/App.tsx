@@ -10,6 +10,7 @@ import AdminLayout from './AdminLayout'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminTickets from './pages/AdminTickets'
 import AdminTicketDetail from './pages/AdminTicketDetail'
+import AdminCategories from './pages/AdminCategories'
 import AdminReports from './pages/AdminReports'
 
 import AuthGuard from './components/AuthGuard'
@@ -37,6 +38,7 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="tickets" element={<AdminTickets />} />
           <Route path="tickets/:id" element={<AdminTicketDetail />} />
+          <Route path="categories" element={<AdminCategories />} />
           <Route path="reports" element={<AdminReports />} />
         </Route>
       </Routes>
