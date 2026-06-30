@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import Report from './pages/Report'
 import ReportSuccess from './pages/ReportSuccess'
 import Projects from './pages/Projects'
+import TrackTicket from './pages/TrackTicket'
 import Login from './pages/Login'
 import InviteAccept from './pages/InviteAccept'
 import AdminLayout from './AdminLayout'
@@ -28,6 +29,7 @@ function App() {
           <Route path="report" element={<Report />} />
           <Route path="report/success" element={<ReportSuccess />} />
           <Route path="projects" element={<Projects />} />
+          <Route path="track/:publicToken" element={<TrackTicket />} />
           <Route path="login" element={<Login />} />
           <Route path="invite/:token" element={<InviteAccept />} />
         </Route>
