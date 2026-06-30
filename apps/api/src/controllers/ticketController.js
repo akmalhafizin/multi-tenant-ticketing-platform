@@ -80,4 +80,34 @@ async function create(req, res, next) {
   }
 }
 
-module.exports = { createPublic, create };
+/**
+ * GET /api/tickets/track/:publicToken
+ * Public — no auth. Returns ticket details + public comments.
+ */
+async function trackGet(req, res, next) {
+  try {
+    const ticket = await ticketService.getByPublicToken(req.params.publicToken);
+    return res.json({ success: true, data: ticket, error: null });
+  } catch (err) {
+    if (err.status === 404) {
+      return res.status(404).json({ success: false, data: null, error: err.message });
+    }
+    next(err);
+  }
+}
+
+/**
+ * POST /api/tickets/track/:publicToken/reply
+ * Public — no auth. Guest adds a reply to their ticket.
+ */
+async function trackReply(req, res, next) {
+  try {
+    const comment = await ticketService.replyByPublicToken(req.params.publicToken, req.body);
+    return res.status(201).json({ success: true, data: comment, error: null });
+  } catch (err) {
+    const status = err.status || 500;
+    return res.status(status).json({ success: false, data: null, error: err.message });
+  }
+}
+
+module.exports = { createPublic, create, trackGet, trackReply };

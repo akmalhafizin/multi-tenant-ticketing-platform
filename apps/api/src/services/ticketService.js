@@ -1,6 +1,103 @@
 const prisma = require("../lib/prisma");
 
 /**
+ * Get a ticket by public token (guest tracking).
+ */
+async function getByPublicToken(publicToken) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { publicToken },
+    include: {
+      category: { select: { name: true } },
+      assignedAgent: { select: { name: true } },
+      comments: {
+        where: { isInternal: false },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          authorType: true,
+          guestName: true,
+          body: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  if (!ticket) {
+    const err = new Error("Ticket not found");
+    err.status = 404;
+    throw err;
+  }
+
+  return {
+    id: ticket.id,
+    title: ticket.title,
+    description: ticket.description,
+    status: ticket.status,
+    priority: ticket.priority,
+    category: ticket.category?.name || null,
+    assignedTo: ticket.assignedAgent?.name || null,
+    guestName: ticket.guestName,
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.updatedAt,
+    comments: ticket.comments,
+  };
+}
+
+/**
+ * Add a guest reply to a ticket by public token.
+ */
+async function replyByPublicToken(publicToken, { guestName, body }) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { publicToken },
+  });
+
+  if (!ticket) {
+    const err = new Error("Ticket not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (!body || !body.trim()) {
+    const err = new Error("Reply body is required");
+    err.status = 400;
+    throw err;
+  }
+
+  // If ticket is resolved or closed, prevent replies
+  if (ticket.status === "RESOLVED" || ticket.status === "CLOSED") {
+    const err = new Error("This ticket is closed and no longer accepts replies");
+    err.status = 400;
+    throw err;
+  }
+
+  const comment = await prisma.comment.create({
+    data: {
+      ticketId: ticket.id,
+      authorType: "GUEST",
+      guestName: guestName?.trim() || ticket.guestName || "Guest",
+      body: body.trim(),
+      isInternal: false,
+    },
+  });
+
+  // Auto set ticket back to PENDING when guest replies
+  if (ticket.status === "ON_HOLD") {
+    await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { status: "PENDING" },
+    });
+  }
+
+  return {
+    id: comment.id,
+    body: comment.body,
+    guestName: comment.guestName,
+    createdAt: comment.createdAt,
+  };
+}
+
+/**
  * Create a ticket from the public submission form.
  * The organization is resolved from the subdomain (req.tenant).
  */
@@ -144,4 +241,4 @@ async function createStaff({
   return ticket;
 }
 
-module.exports = { createPublic, createStaff };
+module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken };

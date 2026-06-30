@@ -10,4 +10,8 @@ router.post("/public", ticketController.createPublic);
 // Authenticated ticket creation (staff dashboard)
 router.post("/", authenticate, ticketController.create);
 
+// Guest tracking (public — no auth)
+router.get("/track/:publicToken", ticketController.trackGet);
+router.post("/track/:publicToken/reply", ticketController.trackReply);
+
 module.exports = router;
