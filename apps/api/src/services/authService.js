@@ -7,13 +7,26 @@ const JWT_EXPIRES_IN = "8h";
 
 /**
  * Authenticate a user by email + password.
+ * When organizationSlug is provided, scopes the lookup to that tenant.
  * Returns { token, user } or throws.
  */
-async function login(email, password) {
-  // Find user by email (globally — edge case of same email across orgs
-  // can be resolved later with an org-picker step)
+async function login(email, password, organizationSlug) {
+  const where = { email };
+  if (organizationSlug) {
+    // Scope login to a specific tenant via subdomain
+    const org = await prisma.organization.findUnique({
+      where: { slug: organizationSlug },
+    });
+    if (!org) {
+      const err = new Error("Invalid email or password");
+      err.status = 401;
+      throw err;
+    }
+    where.organizationId = org.id;
+  }
+
   const user = await prisma.user.findFirst({
-    where: { email },
+    where,
     include: {
       organization: {
         select: { id: true, name: true, slug: true },

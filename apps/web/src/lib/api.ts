@@ -1,3 +1,5 @@
+import { extractSlugFromHost } from '../hooks/useTenant'
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export async function api<T = unknown>(
@@ -11,6 +13,12 @@ export async function api<T = unknown>(
   }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
+  }
+
+  // Inject org slug from subdomain for tenant resolution
+  const slug = extractSlugFromHost()
+  if (slug) {
+    headers['X-Org-Slug'] = slug
   }
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })

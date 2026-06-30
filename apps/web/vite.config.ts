@@ -10,4 +10,11 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     tailwindcss()
   ],
+  server: {
+    // Allow subdomain access via *.lvh.me and custom hosts
+    allowedHosts: [
+      '.lvh.me',     // any-subdomain.lvh.me
+      '.localhost',  // any-subdomain.localhost
+    ],
+  },
 })

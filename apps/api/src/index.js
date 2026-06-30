@@ -5,11 +5,15 @@ require("dotenv").config();
 const authRoutes = require("./routes/auth");
 const categoryRoutes = require("./routes/category");
 const userRoutes = require("./routes/user");
+const { resolveTenant } = require("./middleware/tenant");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// ─── Tenant Resolution (subdomain-based) ───────────────────────
+app.use(resolveTenant);
 
 // ─── Routes ──────────────────────────────────────────────────────
 app.get("/", (req, res) => {
