@@ -1,6 +1,30 @@
 const prisma = require("../lib/prisma");
 
 /**
+ * List tickets for an organization.
+ */
+async function list(organizationId, { status, limit = 50, offset = 0 } = {}) {
+  const where = { organizationId };
+  if (status) where.status = status;
+
+  const [tickets, total] = await Promise.all([
+    prisma.ticket.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+      include: {
+        category: { select: { name: true } },
+        assignedAgent: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.ticket.count({ where }),
+  ]);
+
+  return { tickets, total };
+}
+
+/**
  * Get a ticket by public token (guest tracking).
  */
 async function getByPublicToken(publicToken) {
@@ -254,4 +278,4 @@ async function createStaff({
   return ticket;
 }
 
-module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken };
+module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken, list };

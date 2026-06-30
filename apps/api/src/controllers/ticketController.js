@@ -112,4 +112,22 @@ async function trackReply(req, res, next) {
   }
 }
 
-module.exports = { createPublic, create, trackGet, trackReply };
+/**
+ * GET /api/tickets
+ * List tickets for the authenticated user's organization.
+ */
+async function list(req, res, next) {
+  try {
+    const { status, limit, offset } = req.query;
+    const result = await ticketService.list(req.user.organizationId, {
+      status,
+      limit: limit ? parseInt(limit) : 50,
+      offset: offset ? parseInt(offset) : 0,
+    });
+    return res.json({ success: true, data: result, error: null });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createPublic, create, trackGet, trackReply, list };
