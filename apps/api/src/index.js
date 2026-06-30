@@ -5,6 +5,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/auth");
 const categoryRoutes = require("./routes/category");
 const userRoutes = require("./routes/user");
+const ticketRoutes = require("./routes/ticket");
 const { resolveTenant } = require("./middleware/tenant");
 
 const app = express();
@@ -23,6 +24,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/tickets", ticketRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────
 app.use((err, req, res, next) => {

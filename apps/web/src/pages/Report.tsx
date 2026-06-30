@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { extractSlugFromHost } from '../hooks/useTenant'
 
 interface FormState {
   fullName: string
@@ -28,6 +29,16 @@ const initialForm: FormState = {
 function Report() {
   const navigate = useNavigate()
   const [form, setForm] = useState<FormState>(initialForm)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const categoryLabels: Record<string, string> = {
+    mechanical: 'Mechanical Failure',
+    electrical: 'Electrical Malfunction',
+    structural: 'Structural Damage',
+    hvac: 'HVAC Issues',
+    other: 'Other',
+  }
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -39,24 +50,52 @@ function Report() {
     }))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setSubmitting(true)
+    setError('')
 
-    // TODO: replace this with a real call to your apps/api backend, e.g.:
-    // await fetch('/api/tickets', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(form),
-    // })
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 
-    console.log('Submitting issue report:', form)
+      // Inject org slug from subdomain
+      const slug = extractSlugFromHost()
+      if (slug) {
+        headers['X-Org-Slug'] = slug
+      }
 
-    navigate('/report/success', {
-      state: {
-        category: form.issueCategory,
-        urgency: form.urgency,
-      },
-    })
+      const res = await fetch(`${API_BASE}/api/tickets/public`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title: `${form.issueCategory ? categoryLabels[form.issueCategory] || form.issueCategory : 'Uncategorized'} Issue`,
+          description: form.description,
+          guestName: form.fullName,
+          guestEmail: form.email,
+          guestPhone: form.phoneNumber,
+        }),
+      })
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        throw new Error(json.error || 'Failed to submit issue')
+      }
+
+      navigate('/report/success', {
+        state: {
+          category: form.issueCategory,
+          urgency: form.urgency,
+          ticketId: json.data.id,
+          publicToken: json.data.publicToken,
+        },
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function handleReset() {
@@ -83,6 +122,15 @@ function Report() {
 
       {/* Issue Submission Form Container */}
       <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden px-4 sm:px-0">
+        {error && (
+          <div className="p-4 bg-red-50 border-b border-red-200 text-red-700 text-sm flex items-start gap-3">
+            <span className="material-symbols-outlined text-base mt-0.5">error</span>
+            <span>{error}</span>
+            <button onClick={() => setError('')} className="ml-auto text-red-500 hover:text-red-700">
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+        )}
         <form onSubmit={handleSubmit} onReset={handleReset} className="divide-y divide-gray-200">
           {/* Section 1: Individual Details */}
           <div className="p-8">
@@ -289,9 +337,10 @@ function Report() {
               </button>
               <button
                 type="submit"
-                className="flex-1 md:flex-none px-12 py-3 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors shadow-lg rounded"
+                disabled={submitting}
+                className="flex-1 md:flex-none px-12 py-3 text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400 transition-colors shadow-lg rounded"
               >
-                SUBMIT ISSUE
+                {submitting ? 'SUBMITTING...' : 'SUBMIT ISSUE'}
               </button>
             </div>
           </div>
