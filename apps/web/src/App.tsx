@@ -15,6 +15,7 @@ import AdminTicketDetail from './pages/AdminTicketDetail'
 import AdminCategories from './pages/AdminCategories'
 import AdminUsers from './pages/AdminUsers'
 import AdminSettings from './pages/AdminSettings'
+import AdminRoles from './pages/AdminRoles'
 import AdminCreateTicket from './pages/AdminCreateTicket'
 import AdminReports from './pages/AdminReports'
 
@@ -48,6 +49,7 @@ function App() {
           <Route path="tickets/:id" element={<AdminTicketDetail />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="roles" element={<AdminRoles />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="reports" element={<AdminReports />} />
         </Route>
