@@ -146,4 +146,37 @@ async function getById(req, res, next) {
   }
 }
 
-module.exports = { createPublic, create, trackGet, trackReply, list, getById };
+/**
+ * PATCH /api/tickets/:id
+ * Update status, category, or assignment.
+ */
+async function update(req, res, next) {
+  try {
+    const ticket = await ticketService.update(req.params.id, req.body, req.user.organizationId);
+    return res.json({ success: true, data: ticket, error: null });
+  } catch (err) {
+    const status = err.status || 500;
+    return res.status(status).json({ success: false, data: null, error: err.message });
+  }
+}
+
+/**
+ * POST /api/tickets/:id/comments
+ * Add a comment to a ticket.
+ */
+async function addComment(req, res, next) {
+  try {
+    const result = await ticketService.addComment(req.params.id, {
+      userId: req.user.userId,
+      body: req.body.body,
+      isInternal: req.body.isInternal || false,
+      notifyGuest: req.body.notifyGuest || false,
+    }, req.user.organizationId);
+    return res.status(201).json({ success: true, data: result, error: null });
+  } catch (err) {
+    const status = err.status || 500;
+    return res.status(status).json({ success: false, data: null, error: err.message });
+  }
+}
+
+module.exports = { createPublic, create, trackGet, trackReply, list, getById, update, addComment };

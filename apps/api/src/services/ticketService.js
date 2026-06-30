@@ -308,4 +308,117 @@ async function createStaff({
   return ticket;
 }
 
-module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken, list, getById };
+/**
+ * Update a ticket's status, category, or assignment.
+ */
+async function update(id, data, organizationId) {
+  const ticket = await prisma.ticket.findFirst({ where: { id, organizationId } });
+  if (!ticket) {
+    const err = new Error("Ticket not found");
+    err.status = 404;
+    throw err;
+  }
+
+  const updates = {};
+
+  if (data.status !== undefined) {
+    const valid = ["OPEN", "PENDING", "ON_HOLD", "RESOLVED", "CLOSED"];
+    if (!valid.includes(data.status)) {
+      const err = new Error("Invalid status");
+      err.status = 400;
+      throw err;
+    }
+    updates.status = data.status;
+    if (data.status === "RESOLVED") updates.resolvedAt = new Date();
+  }
+
+  if (data.categoryId !== undefined) {
+    if (data.categoryId) {
+      const cat = await prisma.category.findFirst({ where: { id: data.categoryId, organizationId } });
+      if (!cat) {
+        const err = new Error("Category not found in this organization");
+        err.status = 400;
+        throw err;
+      }
+    }
+    updates.categoryId = data.categoryId || null;
+  }
+
+  if (data.assignedAgentId !== undefined) {
+    if (data.assignedAgentId) {
+      const agent = await prisma.user.findFirst({ where: { id: data.assignedAgentId, organizationId } });
+      if (!agent) {
+        const err = new Error("User not found in this organization");
+        err.status = 400;
+        throw err;
+      }
+    }
+    updates.assignedAgentId = data.assignedAgentId || null;
+  }
+
+  if (Object.keys(updates).length === 0) return ticket;
+
+  return prisma.ticket.update({
+    where: { id },
+    data: updates,
+    include: {
+      category: { select: { id: true, name: true } },
+      assignedAgent: { select: { id: true, name: true, email: true } },
+    },
+  });
+}
+
+/**
+ * Add a comment to a ticket.
+ * If notifyGuest is true, logs the tracking link that would be emailed.
+ */
+async function addComment(ticketId, { userId, body, isInternal, notifyGuest }, organizationId) {
+  const ticket = await prisma.ticket.findFirst({ where: { id: ticketId, organizationId } });
+  if (!ticket) {
+    const err = new Error("Ticket not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (!body || !body.trim()) {
+    const err = new Error("Comment body is required");
+    err.status = 400;
+    throw err;
+  }
+
+  // Build status change entries as comments
+  const comment = await prisma.comment.create({
+    data: {
+      ticketId,
+      authorType: "AGENT",
+      userId,
+      body: body.trim(),
+      isInternal: isInternal || false,
+    },
+    include: {
+      user: { select: { id: true, name: true } },
+    },
+  });
+
+  // If notifyGuest and ticket has guestEmail, log the notification
+  let notification = null;
+  if (notifyGuest && ticket.guestEmail) {
+    const trackingLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/track/${ticket.publicToken}`;
+    console.log(`[EMAIL] To: ${ticket.guestEmail} — New reply on ticket #${ticket.id}`);
+    console.log(`[EMAIL] Tracking link: ${trackingLink}`);
+    notification = {
+      to: ticket.guestEmail,
+      trackingLink,
+      message: `New update on your ticket. View progress at: ${trackingLink}`,
+    };
+  }
+
+  // Auto-set ticket to PENDING when agent replies (if it was ON_HOLD)
+  if (ticket.status === "ON_HOLD") {
+    await prisma.ticket.update({ where: { id: ticketId }, data: { status: "PENDING" } });
+  }
+
+  return { comment, notification };
+}
+
+module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken, list, getById, update, addComment };
