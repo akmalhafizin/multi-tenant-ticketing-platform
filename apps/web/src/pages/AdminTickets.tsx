@@ -126,9 +126,12 @@ function AdminTickets() {
             <button className="flex items-center px-4 py-2 bg-white border border-gray-200 text-sm font-medium rounded hover:bg-gray-50 transition-colors">
               <span className="material-symbols-outlined text-sm mr-2">filter_list</span> Filter
             </button>
-            <button className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors">
+            <Link
+              to="/admin/tickets/create"
+              className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors"
+            >
               <span className="material-symbols-outlined text-sm mr-2">add</span> Create Ticket
-            </button>
+            </Link>
           </div>
         </div>
         <div className="overflow-x-auto">
