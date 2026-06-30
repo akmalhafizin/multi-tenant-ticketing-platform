@@ -1,4 +1,5 @@
-# multi-tenant-ticketing-platform
+# Multi-Tenant Ticketing Platform
+
 Multi-tenant helpdesk SaaS that enables businesses to manage customer support tickets without requiring customer accounts.
 
 Copyright (c) 2026 akmalhafizin
@@ -15,122 +16,124 @@ Unauthorized copying, modification, distribution, or use of this software is str
 This platform lets multiple independent businesses ("tenants") each run their own helpdesk under one shared application. Every tenant gets:
 
 - Their own isolated set of staff accounts, tickets, and categories
-- A single public submission URL (and QR code) that customers use to open a ticket — **no customer account or login required**
-- A private tracking link for each ticket so a customer can check status later without signing up
+- A single public submission URL (and QR code) — **no customer account or login required**
+- A private tracking link for each ticket so a customer can check status + reply without signing up
+- Custom roles with granular page access and ticket permissions (RBAC)
+- Resolution SLA tracking and guest rating system (1-5 stars, auto-closes ticket)
 
-All tenant data is scoped by `organizationId` throughout the schema — every query in the application layer should filter on it to maintain tenant isolation.
+All tenant data is scoped by `organizationId` throughout the schema — every query in the application layer filters on it to maintain tenant isolation.
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-tenant auth** | JWT-based login scoped per organization, subdomain-aware |
+| **Role-based access (RBAC)** | Custom roles with per-page and per-ticket-action permissions |
+| **Ticket management** | Create, assign, update status/category, comment with internal notes |
+| **Guest tracking** | Customers track ticket progress via `/track/{publicToken}` — no login |
+| **File uploads** | Drag & drop images + documents with preview, multer backend |
+| **Staff invites** | Invite new agents/admins via tokenized invite links |
+| **SLA tracking** | Per-org resolution time targets with progress bars |
+| **Guest rating** | Resolved tickets ask for 1-5 star rating, which auto-closes the ticket |
+| **Reports** | Live KPI cards, category distribution, status breakdown, recent activity |
+| **Subdomain support** | Each org gets `{slug}.yourdomain.com` for public submission form |
+
+---
 
 ## Project Structure
 
 ```
 multi-tenant-ticketing-platform/
 ├── apps/
-│   ├── api/          # Backend — Prisma schema, migrations, API server
-│   └── web/          # Frontend — Vite app (staff dashboard + public ticket form)
-└── docker-compose.yml
+│   ├── api/
+│   │   ├── prisma/          # Schema, migrations
+│   │   ├── src/
+│   │   │   ├── controllers/ # Route handlers
+│   │   │   ├── middleware/   # Auth, tenant resolution, upload
+│   │   │   ├── routes/      # Express routers
+│   │   │   ├── services/    # Business logic
+│   │   │   └── scripts/     # Seed script
+│   │   ├── uploads/         # Uploaded files
+│   │   └── package.json
+│   └── web/
+│       ├── src/
+│       │   ├── components/  # Reusable UI components
+│       │   ├── hooks/       # Auth, tenant hooks
+│       │   ├── lib/         # API client, types
+│       │   └── pages/       # Page components
+│       └── package.json
+├── docker-compose.yml       # PostgreSQL
+└── README.md
 ```
 
-> Adjust the `web` folder name above to match whatever you actually named the Vite app directory.
+---
 
 ## Tech Stack
 
-- **ORM:** [Prisma](https://www.prisma.io/)
-- **Database:** PostgreSQL
-- **Frontend:** [Vite](https://vite.dev/)
-- **ID strategy:** `cuid()` for all primary keys
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Node.js, Express 5, CommonJS |
+| **ORM** | Prisma 7 (PostgreSQL adapter) |
+| **Database** | PostgreSQL 15 (Docker) |
+| **Frontend** | React 19, Vite 8, TypeScript 6 |
+| **Styling** | Tailwind CSS 4, Material Symbols |
+| **Auth** | bcryptjs + JSON Web Tokens |
+| **File uploads** | Multer (disk storage, 25MB limit) |
+| **ID strategy** | `cuid()` for all primary keys |
+
+---
 
 ## Data Model
 
-The schema lives at `prisma/schema.prisma`. Below is a summary of each model and how they relate.
-
 ### `Organization` (tenant)
+- `slug` — unique subdomain identifier (e.g. `rcl-engineering`)
+- `welcomeMessage`, `defaultCategoryId` — public form customization
+- `resolutionSlaHours` — target hours to resolve tickets
 
-The top-level tenant record. Each organization has:
+### `Role` (custom RBAC)
+- `name`, `description`, `isSystem` (protected from deletion)
+- `permissions` (JSON): `pages` (7 admin pages) and `tickets` (6 actions)
+- Pre-seeded: Owner, Admin, Agent — each with appropriate defaults
 
-- A unique `slug` used to build its public ticket-submission URL/QR code (e.g. `https://yourapp.com/submit/{slug}`)
-- Optional `welcomeMessage` and `defaultCategoryId` to customize the public submission form
-- Owns its own `users`, `tickets`, `categories`, and `invites`
+### `User` (staff)
+- Scoped to `organizationId`
+- `role` (OWNER/ADMIN/AGENT) + optional `roleId` linking to a custom Role
+- `@@unique([organizationId, email])` — email unique per tenant
 
-### `User` (staff / agent)
-
-Logged-in staff accounts, always scoped to one organization.
-
-- `role` is one of `OWNER`, `ADMIN`, or `AGENT`
-- `passwordHash` stores a bcrypt/argon2 hash — **never** a plaintext password. Hashing happens in application code before Prisma ever receives the value
-- `email` is unique **per organization**, not globally — the same person could be an agent at two different tenants with the same email, so login flows need to resolve which organization first (e.g. via a subdomain, slug in the URL, or an org-picker step)
-
-### `OrganizationInvite` (onboarding)
-
-Handles inviting new staff into an organization.
-
-- An admin/owner creates an invite with a target `email`, intended `role`, and `expiresAt`
-- A unique `token` is emailed to the invitee; visiting the link lets them accept and create their `User` account
-- `status` tracks `PENDING → ACCEPTED`, or `EXPIRED` / `REVOKED`
-- Only one `PENDING` invite per email per organization should exist at a time. This is enforced via a **partial unique index** added through a raw SQL migration (see [Manual Migration Steps](#manual-migration-steps-required) below) rather than a plain `@@unique`, since a plain unique constraint would also incorrectly block legitimate invite history (e.g. two prior `EXPIRED` rows for the same email)
+### `OrganizationInvite`
+- Tokenized invite flow for onboarding new staff
+- `status`: PENDING → ACCEPTED | EXPIRED | REVOKED
+- Partial unique index enforces one pending invite per email per org
 
 ### `Category`
-
-Optional ticket categorization (e.g. "Billing", "Technical", "General"), scoped per organization.
+- Ticket categories, scoped per organization
+- `@@unique([organizationId, name])`
 
 ### `Ticket`
-
-The core entity. Can be created two ways:
-
-1. **By a guest, with no login** — via the organization's public submission URL. Guest identity is captured loosely via `guestName`, `guestEmail`, `guestPhone` (all optional, no account created)
-2. **By a staff member**, directly inside the dashboard
-
-Other notable fields:
-
-- `publicToken` — a unique, unguessable token generated per ticket so a guest can check status later at a private tracking link (e.g. `/track/{publicToken}`) without ever needing an account
-- `status` — `OPEN`, `PENDING`, `ON_HOLD`, `RESOLVED`, `CLOSED`
-- `priority` — `LOW`, `MEDIUM`, `HIGH`, `URGENT`
-- `assignedAgentId` — optionally links to a `User` handling the ticket
-- `categoryId` uses a **composite foreign key** against `Category`'s `(organizationId, id)` compound unique index. This guarantees at the database level that a ticket can never be assigned a category belonging to a *different* organization — a plain single-column FK can't express that constraint
+- Created via public form (guest) or staff dashboard
+- `publicToken` — unique tracking link for guests
+- `status`: OPEN → PENDING → ON_HOLD → RESOLVED → CLOSED
+- `rating` — guest rating (1-5), auto-closes the ticket
+- `resolvedAt` — timestamp for SLA computation
+- Composite FK on `(organizationId, categoryId)` prevents cross-org category assignment
 
 ### `Comment`
-
-The reply thread on a ticket. Supports both staff and guest replies (e.g. a guest replying via an emailed magic link).
-
-- `authorType` is `AGENT` or `GUEST`
-- `isInternal` marks a note as staff-only, hidden from the guest
-- **Important constraint not enforceable in Prisma's schema language:** when `authorType = AGENT`, `userId` must be set; when `authorType = GUEST`, `guestEmail` must be set. This must be enforced both in application-level validation and via a database `CHECK` constraint added manually post-migration (see below)
+- Supports AGENT and GUEST author types
+- `isInternal` — staff-only notes hidden from guest view
 
 ### `Attachment`
+- Files linked to tickets, stored in `uploads/` and served statically
 
-Files (e.g. screenshots) attached to a ticket.
-
-## Manual Migration Steps Required
-
-Prisma's schema language cannot express `CHECK` constraints or partial/filtered unique indexes. Two rules in this schema rely on raw SQL that **will not be generated automatically** — you must add them yourself after running `prisma migrate dev --create-only`, by editing the generated `migration.sql` file before applying it:
-
-**1. Comment author consistency**
-
-```sql
-ALTER TABLE "Comment" ADD CONSTRAINT "comment_author_consistency"
-CHECK (
-  ("authorType" = 'AGENT' AND "userId" IS NOT NULL) OR
-  ("authorType" = 'GUEST' AND "guestEmail" IS NOT NULL)
-);
-```
-
-**2. One pending invite per email per organization**
-
-```sql
-CREATE UNIQUE INDEX "one_pending_invite_per_email"
-ON "OrganizationInvite" ("organizationId", "email")
-WHERE "status" = 'PENDING';
-```
-
-Without these, the database will silently allow invalid rows (e.g. a `GUEST` comment with no `guestEmail`, or duplicate pending invites) even though the application layer is expected to prevent them.
-
-> **Note:** `Organization.defaultCategoryId` has a similar same-tenant requirement (the default category must belong to that same organization), but Prisma cannot express a self-referential composite FK here. This must be validated in application code whenever `defaultCategoryId` is set.
+---
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js
-- Docker (recommended for local Postgres) or a local PostgreSQL install
+- Docker (for local Postgres) or a local PostgreSQL install
 
 ### 1. Start the database
 
@@ -138,43 +141,38 @@ Without these, the database will silently allow invalid rows (e.g. a `GUEST` com
 docker compose up -d
 ```
 
-This starts a PostgreSQL 15 container as defined in `docker-compose.yml`.
+This starts a PostgreSQL 15 container.
 
-> If you also have a native PostgreSQL install running locally, it may already be bound to port `5432`, which will prevent the container from being reachable on that port. Either stop the native service, or remap the container to a different host port (e.g. `5433:5432`) and update `DATABASE_URL` to match.
+> If you have a native PostgreSQL running locally, it may be bound to port `5432`. Either stop it or remap the container (e.g. `5433:5432`) and update `DATABASE_URL`.
 
-### 2. Configure environment variables
+### 2. Configure environment
 
-Create `.env` in the project root (same level as `package.json`):
-
-```dotenv
+```bash
+# apps/api/.env
 DATABASE_URL="postgresql://postgres:password@localhost:5432/ticketing"
+JWT_SECRET="your-secret-key-change-in-production"
+FRONTEND_URL="http://localhost:5173"
 ```
 
-Make sure the database name in the URL matches `POSTGRES_DB` in `docker-compose.yml`.
-
-### 3. Run the initial migration
+### 3. Run migrations + seed
 
 ```bash
-npx prisma migrate dev --name init
-```
-
-This creates all tables defined in `prisma/schema.prisma`. Remember to apply the manual `CHECK` constraint and partial index described above before this migration goes to any shared/production environment.
-
-### 4. Generate the Prisma Client
-
-```bash
+cd apps/api
+npx prisma migrate dev
 npx prisma generate
+npm run seed
 ```
 
-### 5. (Optional) Inspect your data
+### 4. Start the API
 
 ```bash
-npx prisma studio
+cd apps/api
+npm run dev
 ```
 
-### 6. Start the frontend (Vite)
+API runs on **http://localhost:3001**.
 
-From the frontend app directory:
+### 5. Start the frontend
 
 ```bash
 cd apps/web
@@ -182,47 +180,192 @@ npm install
 npm run dev
 ```
 
-By default Vite serves on `http://localhost:5173`. The frontend covers two distinct experiences:
+Frontend runs on **http://localhost:5173**.
 
-- **Staff dashboard** — authenticated, scoped to one organization (login, manage tickets, reply to customers, manage categories/invites)
-- **Public ticket form** — unauthenticated, resolved by the organization's `slug` (e.g. `/submit/:slug`), used for both direct links and QR codes
+The Vite dev server proxies `/api` requests to the backend automatically (configured in `vite.config.ts`). No separate `VITE_API_URL` needed for local dev.
 
-If the frontend needs to call the API, point it at the API's base URL via a Vite env variable (must be prefixed `VITE_` to be exposed to client code):
+### 6. Access via subdomain (local dev)
 
-```dotenv
-# apps/web/.env
-VITE_API_URL="http://localhost:3000"
+Use **[lvh.me](http://lvh.me)** — free DNS that resolves `*.lvh.me` to `127.0.0.1`:
+
+```bash
+http://rcl-engineering.lvh.me:5173/login          # Admin login
+http://rcl-engineering.lvh.me:5173/report          # Public ticket form
+http://rcl-engineering.lvh.me:5173/admin/dashboard # Staff dashboard
 ```
+
+---
+
+## Running for Public Demo (Cloudflare Tunnel)
+
+To share your local server with anyone:
+
+```bash
+# Terminal 1 — API
+cd apps/api && npm run dev
+
+# Terminal 2 — Frontend
+cd apps/web && npm run dev
+
+# Terminal 3 — Cloudflare Tunnel
+cloudflared tunnel --url http://localhost:5173
+```
+
+The tunnel gives you a public URL like:
+```
+https://something.trycloudflare.com
+```
+
+**All three processes must stay running.** Share the tunnel URL — anyone can access the full app through it.
+
+### Seeded Credentials
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@rclengineering.com` | `admin123` | OWNER |
+| `agent@rclengineering.com` | `agent123` | AGENT |
+
+---
+
+## API Reference
+
+All responses follow the standard format:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "error": null
+}
+```
+
+### Auth
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `POST` | `/api/auth/login` | Public |
+| `POST` | `/api/auth/forgot-password` | Public |
+| `GET` | `/api/auth/me` | Authenticated |
+
+### Tickets
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `GET` | `/api/tickets` | Authenticated |
+| `GET` | `/api/tickets/:id` | Authenticated |
+| `POST` | `/api/tickets` | Authenticated (staff create) |
+| `PATCH` | `/api/tickets/:id` | Authenticated (status/category/assignee) |
+| `POST` | `/api/tickets/public` | Public (subdomain required) |
+| `GET` | `/api/tickets/track/:publicToken` | Public |
+| `POST` | `/api/tickets/track/:publicToken/reply` | Public |
+| `POST` | `/api/tickets/rate/:publicToken` | Public (1-5 rating, auto-closes) |
+| `POST` | `/api/tickets/:id/comments` | Authenticated |
+
+### Categories
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `GET` | `/api/categories` | Authenticated |
+| `POST` | `/api/categories` | OWNER/ADMIN |
+| `PUT` | `/api/categories/:id` | OWNER/ADMIN |
+| `DELETE` | `/api/categories/:id` | OWNER/ADMIN |
+
+### Users & Staff
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `GET` | `/api/users` | OWNER/ADMIN |
+| `PATCH` | `/api/users/:id/role` | OWNER only |
+| `DELETE` | `/api/users/:id` | OWNER/ADMIN |
+
+### Roles (RBAC)
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `GET` | `/api/roles` | OWNER only |
+| `POST` | `/api/roles` | OWNER only |
+| `PUT` | `/api/roles/:id` | OWNER only |
+| `DELETE` | `/api/roles/:id` | OWNER only (system roles protected) |
+
+### Invites
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `GET` | `/api/invites` | OWNER/ADMIN |
+| `POST` | `/api/invites` | OWNER/ADMIN |
+| `PATCH` | `/api/invites/:id/revoke` | OWNER/ADMIN |
+| `GET` | `/api/invites/:token` | Public (accept flow) |
+| `POST` | `/api/invites/:token/accept` | Public |
+
+### Organization
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| `GET` | `/api/org` | Authenticated |
+| `PATCH` | `/api/org` | OWNER/ADMIN |
+
+---
 
 ## Multi-Tenancy & Subdomains
 
 Each organization gets a unique subdomain, e.g. `rcl-engineering.yourapp.com`. The tenant is resolved from the subdomain for public flows (ticket submission, guest tracking).
 
-### Local development with subdomains
+### How it works
 
-Use **[lvh.me](http://lvh.me)** — a free DNS that resolves `*.lvh.me` to `127.0.0.1` with zero setup:
-
-```bash
-# Access the public form for a specific org:
-http://rcl-engineering.lvh.me:5174/report
-http://agent.lvh.me:5174/report
-
-# Admin login scoped to that org:
-http://rcl-engineering.lvh.me:5174/login
-```
-
-**How it works:**
-
-1. The frontend detects the subdomain from the browser's hostname
-2. Every API call includes an `X-Org-Slug` header (e.g. `rcl-engineering`)
+1. The frontend detects the subdomain from `window.location.hostname`
+2. Every API call includes an `X-Org-Slug` header
 3. The backend's `resolveTenant` middleware reads the header and attaches the organization to `req.tenant`
-4. Public endpoints (like ticket creation) use `req.tenant.id` to scope the record
-5. Login is scoped to the subdomain's org — email only needs to be unique within that tenant
-
-The Vite dev server is configured (`vite.config.ts`) to allow subdomain access via `allowedHosts: ['.lvh.me', '.localhost']`.
+4. Public endpoints (ticket creation, tracking) use `req.tenant.id` to scope records
+5. Login can be scoped to the subdomain's org — email only needs to be unique within that tenant
 
 ### Multi-Tenancy Rules
 
-- Every query in application code must filter by `organizationId` to prevent cross-tenant data leaks. Consider a middleware/repository layer that injects this automatically based on the authenticated user's session or the resolved tenant from the public submission URL.
-- The public submission flow resolves an `Organization` by its `slug` (e.g. from a QR code or shared link), then creates the `Ticket` with that organization's `id` — no authentication step is involved.
-- Staff login must resolve which organization a user belongs to before or alongside checking credentials, since `email` is unique per-organization rather than globally.
+- Every query in application code must filter by `organizationId`
+- No cross-tenant data access is allowed
+- Guest access resolves organization via `slug` or `publicToken`
+- Staff login resolves the organization from the JWT or subdomain
+
+---
+
+## RBAC Permission Model
+
+Each role has permissions stored as JSON:
+
+```json
+{
+  "pages": {
+    "dashboard": true,
+    "tickets": true,
+    "categories": false,
+    "users": false,
+    "roles": false,
+    "settings": false,
+    "reports": false
+  },
+  "tickets": {
+    "view": true,
+    "create": true,
+    "assign": false,
+    "close": false,
+    "delete": false,
+    "reply": true
+  }
+}
+```
+
+Only OWNER/ADMIN can set tickets to CLOSED status. AGENT role is blocked from role management and org settings.
+
+---
+
+## Architecture Rules
+
+```
+routes → controller → service → prisma
+```
+
+- Routes: request handling only
+- Controllers: input/output orchestration
+- Services: business logic only
+- Prisma: database access only (never directly in routes)
+
+## Security Rules
+
+- Never store plaintext passwords (bcrypt with 12 salt rounds)
+- Validate all input before database operations
+- Enforce tenant isolation in service layer (not only schema)
+- JWT tokens expire after 8 hours, signed with server-side secret
+- File uploads restricted to allowed types, max 25MB per file
+- CLOSED status restricted to OWNER/ADMIN at the service level
