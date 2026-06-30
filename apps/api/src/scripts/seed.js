@@ -10,7 +10,7 @@
  *   - apps/api/.env with DATABASE_URL set
  */
 
-require("dotenv").config();
+require("dotenv").config({ path: require("path").join(__dirname, "..", "..", "..", "..", ".env") });
 const prisma = require("../lib/prisma");
 const bcrypt = require("bcryptjs");
 

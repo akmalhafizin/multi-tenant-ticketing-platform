@@ -147,12 +147,22 @@ This starts a PostgreSQL 15 container.
 
 ### 2. Configure environment
 
+Copy the example file to the project root:
+
 ```bash
-# apps/api/.env
+cp .env.example .env
+# Windows: copy .env.example .env
+```
+
+Then edit `.env` to match your setup:
+
+```dotenv
 DATABASE_URL="postgresql://postgres:password@localhost:5432/ticketing"
-JWT_SECRET="your-secret-key-change-in-production"
+JWT_SECRET="change-this-in-production"
 FRONTEND_URL="http://localhost:5173"
 ```
+
+> The `.env` file lives at the **project root** (same level as `docker-compose.yml`), not inside `apps/api/`. The backend loads it automatically via `dotenv.config()`.
 
 ### 3. Run migrations + seed
 
