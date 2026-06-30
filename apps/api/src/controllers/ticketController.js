@@ -130,4 +130,20 @@ async function list(req, res, next) {
   }
 }
 
-module.exports = { createPublic, create, trackGet, trackReply, list };
+/**
+ * GET /api/tickets/:id
+ * Get a single ticket by ID.
+ */
+async function getById(req, res, next) {
+  try {
+    const ticket = await ticketService.getById(req.params.id, req.user.organizationId);
+    return res.json({ success: true, data: ticket, error: null });
+  } catch (err) {
+    if (err.status === 404) {
+      return res.status(404).json({ success: false, data: null, error: err.message });
+    }
+    next(err);
+  }
+}
+
+module.exports = { createPublic, create, trackGet, trackReply, list, getById };

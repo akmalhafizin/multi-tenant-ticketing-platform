@@ -25,6 +25,36 @@ async function list(organizationId, { status, limit = 50, offset = 0 } = {}) {
 }
 
 /**
+ * Get a single ticket by ID (admin detail view).
+ */
+async function getById(id, organizationId) {
+  const ticket = await prisma.ticket.findFirst({
+    where: { id, organizationId },
+    include: {
+      category: { select: { id: true, name: true } },
+      assignedAgent: { select: { id: true, name: true, email: true } },
+      comments: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          user: { select: { id: true, name: true } },
+        },
+      },
+      attachments: {
+        select: { id: true, fileName: true, fileType: true, fileSize: true, url: true },
+      },
+    },
+  });
+
+  if (!ticket) {
+    const err = new Error("Ticket not found");
+    err.status = 404;
+    throw err;
+  }
+
+  return ticket;
+}
+
+/**
  * Get a ticket by public token (guest tracking).
  */
 async function getByPublicToken(publicToken) {
@@ -278,4 +308,4 @@ async function createStaff({
   return ticket;
 }
 
-module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken, list };
+module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken, list, getById };
