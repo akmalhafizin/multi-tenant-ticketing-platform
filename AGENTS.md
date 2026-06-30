@@ -143,6 +143,14 @@ Before implementing any feature:
 5. Build route
 6. Test with sample data
 
+### Commit Discipline
+
+Every **page** or **component** must be committed individually with a clear, descriptive message. No lumping multiple pages or components into a single commit. This keeps history clean and reviewable.
+
+Examples:
+- `git add -A && git commit -m "feat: add AdminTicketDetail page with timeline and reply form"`
+- `git add -A && git commit -m "feat: add Reports page with KPI cards and category chart"`
+
 ---
 
 # 11. SaaS Product Rules
