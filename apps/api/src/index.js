@@ -7,6 +7,7 @@ const categoryRoutes = require("./routes/category");
 const userRoutes = require("./routes/user");
 const ticketRoutes = require("./routes/ticket");
 const orgRoutes = require("./routes/org");
+const inviteRoutes = require("./routes/invite");
 const { resolveTenant } = require("./middleware/tenant");
 
 const app = express();
@@ -27,6 +28,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/org", orgRoutes);
+app.use("/api/invites", inviteRoutes);
 
 // ─── Error Handler ───────────────────────────────────────────────
 app.use((err, req, res, next) => {
