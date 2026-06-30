@@ -11,6 +11,8 @@ export default defineConfig({
     tailwindcss()
   ],
   server: {
+    // Listen on all interfaces so subdomains (lvh.me → 127.0.0.1) work
+    host: '0.0.0.0',
     // Allow subdomain access via *.lvh.me and custom hosts
     allowedHosts: [
       '.lvh.me',     // any-subdomain.lvh.me
