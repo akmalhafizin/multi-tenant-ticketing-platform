@@ -12,6 +12,8 @@ import AdminTickets from './pages/AdminTickets'
 import AdminTicketDetail from './pages/AdminTicketDetail'
 import AdminReports from './pages/AdminReports'
 
+import AuthGuard from './components/AuthGuard'
+
 function App() {
   return (
     <BrowserRouter>
@@ -24,7 +26,14 @@ function App() {
           <Route path="login" element={<Login />} />
         </Route>
 
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route
+          path="/admin"
+          element={
+            <AuthGuard>
+              <AdminLayout />
+            </AuthGuard>
+          }
+        >
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="tickets" element={<AdminTickets />} />
           <Route path="tickets/:id" element={<AdminTicketDetail />} />

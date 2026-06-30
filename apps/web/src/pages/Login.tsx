@@ -1,63 +1,59 @@
 import { useState } from 'react'
-
-interface LoginForm {
-  adminId: string
-  password: string
-  remember: boolean
-}
-
-const initialLoginForm: LoginForm = {
-  adminId: '',
-  password: '',
-  remember: false,
-}
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 type View = 'login' | 'forgot' | 'forgot-sent'
 
 function Login() {
+  const navigate = useNavigate()
+  const { login } = useAuth()
   const [view, setView] = useState<View>('login')
-  const [form, setForm] = useState<LoginForm>(initialLoginForm)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value, type, checked } = e.target
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }))
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setSubmitting(true)
+
+    try {
+      await login(email, password)
+      navigate('/admin/dashboard')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleForgotSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
+    setSubmitting(true)
 
-    // TODO: replace this with a real call to your apps/api auth endpoint, e.g.:
-    // await fetch('/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(form),
-    // })
-
-    console.log('Login attempt:', form)
-    alert('Sign-in is not connected to a backend yet — check the console for the submitted values.')
-  }
-
-  function handleForgotSubmit(e: React.FormEvent) {
-    e.preventDefault()
-
-    // TODO: replace this with a real call to your apps/api password-reset endpoint, e.g.:
-    // await fetch('/api/auth/forgot-password', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email: forgotEmail }),
-    // })
-
-    console.log('Password reset requested for:', forgotEmail)
-    setView('forgot-sent')
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      })
+      setView('forgot-sent')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   function backToLogin() {
     setView('login')
     setForgotEmail('')
+    setError('')
   }
 
   return (
@@ -93,10 +89,16 @@ function Login() {
 
       {/* Card */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden p-10">
+        {error && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded">
+            {error}
+          </div>
+        )}
+
         {view === 'login' && (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-1.5">
-              <label htmlFor="adminId" className="text-xs font-medium tracking-wide text-gray-700">
+              <label htmlFor="email" className="text-xs font-medium tracking-wide text-gray-700">
                 Admin ID / Email
               </label>
               <div className="relative">
@@ -104,12 +106,13 @@ function Login() {
                   person
                 </span>
                 <input
-                  id="adminId"
-                  name="adminId"
+                  id="email"
+                  name="email"
                   type="text"
-                  value={form.adminId}
-                  onChange={handleChange}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter identification"
+                  required
                   className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded text-base focus:ring-1 focus:ring-red-600 focus:border-red-600 transition-all outline-none"
                 />
               </div>
@@ -136,9 +139,10 @@ function Login() {
                   id="password"
                   name="password"
                   type="password"
-                  value={form.password}
-                  onChange={handleChange}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  required
                   className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded text-base focus:ring-1 focus:ring-red-600 focus:border-red-600 transition-all outline-none"
                 />
               </div>
@@ -149,8 +153,8 @@ function Login() {
                 id="remember"
                 name="remember"
                 type="checkbox"
-                checked={form.remember}
-                onChange={handleChange}
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
                 className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-600"
               />
               <label htmlFor="remember" className="text-xs font-medium tracking-wide text-gray-600">
@@ -160,13 +164,20 @@ function Login() {
 
             <button
               type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-medium tracking-wide py-4 rounded transition-all duration-200 flex items-center justify-center gap-2 group"
+              disabled={submitting}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-xs font-medium tracking-wide py-4 rounded transition-all duration-200 flex items-center justify-center gap-2 group"
             >
-              Sign In
+              {submitting ? 'Signing In...' : 'Sign In'}
               <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">
                 arrow_forward
               </span>
             </button>
+
+            <p className="text-center text-xs text-gray-400 pt-2">
+              <Link to="/" className="text-gray-500 hover:text-red-600 transition-colors">
+                ← Back to Home
+              </Link>
+            </p>
           </form>
         )}
 
@@ -199,9 +210,10 @@ function Login() {
 
             <button
               type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-medium tracking-wide py-4 rounded transition-all duration-200 flex items-center justify-center gap-2 group"
+              disabled={submitting}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-xs font-medium tracking-wide py-4 rounded transition-all duration-200 flex items-center justify-center gap-2 group"
             >
-              Send Reset Link
+              {submitting ? 'Sending...' : 'Send Reset Link'}
               <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">
                 arrow_forward
               </span>

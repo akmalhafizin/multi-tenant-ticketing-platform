@@ -1,4 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -8,6 +9,13 @@ const navItems = [
 
 function AdminLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
 
   return (
     <div className="bg-gray-50 text-gray-900 antialiased min-h-screen">
@@ -43,18 +51,25 @@ function AdminLayout() {
         </nav>
         <div className="px-4 mt-auto">
           <div className="flex items-center p-4 bg-white rounded-xl border border-gray-200">
-            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold mr-3 overflow-hidden">
-              <img
-                alt="Admin Profile"
-                className="w-full h-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlWxgTXHyrMUwWu6e_PFadt_KFRiEqV9OCF5Uaf1H7YxLzkWTdxJOGDU4oVlNRRKnJTMDiWr3f0y-QuZNXozOZQjFkwIRwaUKYGkcaA3QtIFuJ-krM0YkvZasdF6cM_5YgGXx1h50TU8N7vXk_EqZ63RAK2wLaRUTT1DYU-blnsg8bPr8AGAI2jUtBeq7rOzsxH6fTB86FZD6H6SwcOvkNiOz6j9jIhTwnaNwbAHNEt9DHleduQIq6VcnaYelUwG7LIpQDgIiX_F7k"
-              />
+            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold mr-3 overflow-hidden shrink-0">
+              {user?.name ? (
+                <span>{user.name.charAt(0).toUpperCase()}</span>
+              ) : (
+                <span className="material-symbols-outlined text-lg">person</span>
+              )}
             </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">Admin User</p>
-              <p className="text-xs text-gray-500">System Controller</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-gray-900 truncate">{user?.name || 'Admin User'}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email || 'System Controller'}</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-full mt-2 flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">logout</span>
+            Sign Out
+          </button>
         </div>
       </aside>
 
@@ -62,7 +77,9 @@ function AdminLayout() {
       <header className="fixed top-0 right-0 left-64 z-40 bg-white/80 backdrop-blur-md border-b border-gray-200">
         <div className="flex justify-between items-center h-16 px-6">
           <div className="flex items-center gap-4">
-            <span className="text-gray-900 font-bold text-lg tracking-tight">RCL Admin Console</span>
+            <span className="text-gray-900 font-bold text-lg tracking-tight">
+              {user?.organization?.name || 'RCL Admin Console'}
+            </span>
           </div>
           <div className="flex items-center gap-6">
             <div className="relative hidden lg:block">
