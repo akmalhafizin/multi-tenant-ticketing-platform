@@ -194,7 +194,34 @@ If the frontend needs to call the API, point it at the API's base URL via a Vite
 VITE_API_URL="http://localhost:3000"
 ```
 
-## Multi-Tenancy Notes
+## Multi-Tenancy & Subdomains
+
+Each organization gets a unique subdomain, e.g. `rcl-engineering.yourapp.com`. The tenant is resolved from the subdomain for public flows (ticket submission, guest tracking).
+
+### Local development with subdomains
+
+Use **[lvh.me](http://lvh.me)** — a free DNS that resolves `*.lvh.me` to `127.0.0.1` with zero setup:
+
+```bash
+# Access the public form for a specific org:
+http://rcl-engineering.lvh.me:5174/report
+http://agent.lvh.me:5174/report
+
+# Admin login scoped to that org:
+http://rcl-engineering.lvh.me:5174/login
+```
+
+**How it works:**
+
+1. The frontend detects the subdomain from the browser's hostname
+2. Every API call includes an `X-Org-Slug` header (e.g. `rcl-engineering`)
+3. The backend's `resolveTenant` middleware reads the header and attaches the organization to `req.tenant`
+4. Public endpoints (like ticket creation) use `req.tenant.id` to scope the record
+5. Login is scoped to the subdomain's org — email only needs to be unique within that tenant
+
+The Vite dev server is configured (`vite.config.ts`) to allow subdomain access via `allowedHosts: ['.lvh.me', '.localhost']`.
+
+### Multi-Tenancy Rules
 
 - Every query in application code must filter by `organizationId` to prevent cross-tenant data leaks. Consider a middleware/repository layer that injects this automatically based on the authenticated user's session or the resolved tenant from the public submission URL.
 - The public submission flow resolves an `Organization` by its `slug` (e.g. from a QR code or shared link), then creates the `Ticket` with that organization's `id` — no authentication step is involved.
