@@ -45,4 +45,39 @@ async function createPublic(req, res, next) {
   }
 }
 
-module.exports = { createPublic };
+/**
+ * POST /api/tickets
+ * Creates a ticket from the staff/admin dashboard.
+ */
+async function create(req, res, next) {
+  try {
+    const ticket = await ticketService.createStaff({
+      ...req.body,
+      organizationId: req.user.organizationId,
+      actorUserId: req.user.userId,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        id: ticket.id,
+        title: ticket.title,
+        status: ticket.status,
+        priority: ticket.priority,
+        category: ticket.category?.name || null,
+        assignedAgent: ticket.assignedAgent,
+        createdAt: ticket.createdAt,
+      },
+      error: null,
+    });
+  } catch (err) {
+    if (err.status === 400) {
+      return res
+        .status(400)
+        .json({ success: false, data: null, error: err.message });
+    }
+    next(err);
+  }
+}
+
+module.exports = { createPublic, create };
