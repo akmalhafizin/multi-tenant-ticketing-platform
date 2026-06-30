@@ -109,6 +109,7 @@ async function createPublic({
   guestPhone,
   categoryId,
   organizationId,
+  files = [],
 }) {
   if (!title || !title.trim()) {
     const err = new Error("Title is required");
@@ -140,12 +141,24 @@ async function createPublic({
       status: "OPEN",
       priority: "MEDIUM",
     },
-    include: {
-      category: { select: { name: true } },
-    },
   });
 
-  return ticket;
+  // Create attachment records for uploaded files
+  const attachments = [];
+  for (const file of files) {
+    const att = await prisma.attachment.create({
+      data: {
+        ticketId: ticket.id,
+        url: `/uploads/${file.filename}`,
+        fileName: file.originalname,
+        fileType: file.mimetype,
+        fileSize: file.size,
+      },
+    });
+    attachments.push(att);
+  }
+
+  return { ...ticket, attachments };
 }
 
 /**

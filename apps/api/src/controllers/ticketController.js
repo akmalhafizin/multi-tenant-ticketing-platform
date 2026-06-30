@@ -20,6 +20,7 @@ async function createPublic(req, res, next) {
     const ticket = await ticketService.createPublic({
       ...req.body,
       organizationId: req.tenant.id,
+      files: req.files || [],
     });
 
     return res.status(201).json({
@@ -31,6 +32,7 @@ async function createPublic(req, res, next) {
         status: ticket.status,
         priority: ticket.priority,
         category: ticket.category?.name || null,
+        attachments: (ticket.attachments || []).length,
         createdAt: ticket.createdAt,
       },
       error: null,

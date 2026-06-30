@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
@@ -17,6 +18,9 @@ app.use(express.json());
 
 // ─── Tenant Resolution (subdomain-based) ───────────────────────
 app.use(resolveTenant);
+
+// ─── Serve uploaded files ─────────────────────────────────────
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 // ─── Routes ──────────────────────────────────────────────────────
 app.get("/", (req, res) => {
