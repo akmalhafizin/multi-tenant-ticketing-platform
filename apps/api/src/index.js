@@ -48,6 +48,6 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`API running on port ${PORT}`);
 });
