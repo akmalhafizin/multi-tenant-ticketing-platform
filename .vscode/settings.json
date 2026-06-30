@@ -1,4 +1,5 @@
 {
     "snyk.advanced.organization": "937a6002-702d-49e9-9551-727e6790beb1",
-    "snyk.advanced.autoSelectOrganization": true
+    "snyk.advanced.autoSelectOrganization": true,
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

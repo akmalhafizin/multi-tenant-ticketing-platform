@@ -1,0 +1,332 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
+interface FormState {
+  fullName: string
+  phoneNumber: string
+  email: string
+  companyName: string
+  generalLocation: string
+  issueCategory: string
+  specificLocation: string
+  description: string
+  urgency: number
+}
+
+const initialForm: FormState = {
+  fullName: '',
+  phoneNumber: '',
+  email: '',
+  companyName: '',
+  generalLocation: '',
+  issueCategory: '',
+  specificLocation: '',
+  description: '',
+  urgency: 3,
+}
+
+function Report() {
+  const navigate = useNavigate()
+  const [form, setForm] = useState<FormState>(initialForm)
+
+  function handleChange(
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) {
+    const { name, value } = e.target
+    setForm((prev) => ({
+      ...prev,
+      [name]: name === 'urgency' ? Number(value) : value,
+    }))
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+
+    // TODO: replace this with a real call to your apps/api backend, e.g.:
+    // await fetch('/api/tickets', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(form),
+    // })
+
+    console.log('Submitting issue report:', form)
+
+    navigate('/report/success', {
+      state: {
+        category: form.issueCategory,
+        urgency: form.urgency,
+      },
+    })
+  }
+
+  function handleReset() {
+    setForm(initialForm)
+  }
+
+  const urgencyLabels = ['1 - Low', '2', '3 - Medium', '4', '5 - Critical']
+
+  return (
+    <>
+      {/* Hero Section for Context */}
+      <div className="max-w-4xl mx-auto mb-12 px-4">
+        <span className="text-red-600 text-xs font-medium uppercase tracking-widest mb-4 block">
+          Service Desk
+        </span>
+        <h1 className="text-5xl font-bold leading-tight tracking-tight text-gray-900 mb-4">
+          Report an Issue
+        </h1>
+        <p className="text-lg leading-relaxed text-gray-600 max-w-2xl">
+          Submit technical or facilities-related issues directly to our engineering team
+          for rapid intervention and resolution.
+        </p>
+      </div>
+
+      {/* Issue Submission Form Container */}
+      <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-sm rounded-lg overflow-hidden px-4 sm:px-0">
+        <form onSubmit={handleSubmit} onReset={handleReset} className="divide-y divide-gray-200">
+          {/* Section 1: Individual Details */}
+          <div className="p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="material-symbols-outlined text-red-600">person</span>
+              <h2 className="text-xl font-semibold">Individual Details</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-medium tracking-wide text-gray-600">FULL NAME</label>
+                <input
+                  name="fullName"
+                  type="text"
+                  value={form.fullName}
+                  onChange={handleChange}
+                  placeholder="e.g. John Doe"
+                  className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium tracking-wide text-gray-600">PHONE NUMBER</label>
+                <input
+                  name="phoneNumber"
+                  type="tel"
+                  value={form.phoneNumber}
+                  onChange={handleChange}
+                  placeholder="+60 12-345 6789"
+                  className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium tracking-wide text-gray-600">EMAIL ADDRESS (OPTIONAL)</label>
+                <input
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="e.g. john@company.com"
+                  className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium tracking-wide text-gray-600">COMPANY NAME</label>
+                <input
+                  name="companyName"
+                  type="text"
+                  value={form.companyName}
+                  onChange={handleChange}
+                  placeholder="Organization"
+                  className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium tracking-wide text-gray-600">GENERAL LOCATION</label>
+                <input
+                  name="generalLocation"
+                  type="text"
+                  value={form.generalLocation}
+                  onChange={handleChange}
+                  placeholder="City or Region"
+                  className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Issue Details */}
+          <div className="p-8 bg-white">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="material-symbols-outlined text-red-600">report_problem</span>
+              <h2 className="text-xl font-semibold">Issue Details</h2>
+            </div>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium tracking-wide text-gray-600">ISSUE CATEGORY</label>
+                  <select
+                    name="issueCategory"
+                    value={form.issueCategory}
+                    onChange={handleChange}
+                    className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all appearance-none"
+                  >
+                    <option value="">Select Category</option>
+                    <option value="mechanical">Mechanical Failure</option>
+                    <option value="electrical">Electrical Malfunction</option>
+                    <option value="structural">Structural Damage</option>
+                    <option value="hvac">HVAC Issues</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium tracking-wide text-gray-600">SPECIFIC LOCATION DETAIL</label>
+                  <input
+                    name="specificLocation"
+                    type="text"
+                    value={form.specificLocation}
+                    onChange={handleChange}
+                    placeholder="e.g. Block B, Level 4, Room 402"
+                    className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium tracking-wide text-gray-600">ISSUE DESCRIPTION</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  placeholder="Provide a detailed description of the engineering fault or facility issue..."
+                  rows={4}
+                  className="w-full p-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-6 pt-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-medium tracking-wide text-gray-600">URGENCY LEVEL</label>
+                  <span className="text-red-600 font-bold text-sm">Criticality Scale</span>
+                </div>
+                <div className="px-2">
+                  <input
+                    name="urgency"
+                    type="range"
+                    min={1}
+                    max={5}
+                    value={form.urgency}
+                    onChange={handleChange}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-600"
+                  />
+                  <div className="flex justify-between mt-2 text-[10px] font-bold text-gray-500 tracking-tighter uppercase">
+                    {urgencyLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Documentation & Uploads (visual only, not yet wired up) */}
+          <div className="p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="material-symbols-outlined text-red-600">attachment</span>
+              <h2 className="text-xl font-semibold">Documentation</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Image Upload */}
+              <div className="space-y-4">
+                <label className="text-xs font-medium tracking-wide text-gray-600">ISSUE PHOTOS (MULTIPLE)</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
+                  <span className="material-symbols-outlined text-4xl text-gray-500 mb-2 group-hover:text-red-600 transition-colors">
+                    add_a_photo
+                  </span>
+                  <p className="text-base text-gray-900">
+                    Drag &amp; drop or <span className="text-red-600 font-semibold">browse</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Upload up to 5 clear images (JPG, PNG)</p>
+                </div>
+              </div>
+              {/* Contract/File Upload */}
+              <div className="space-y-4">
+                <label className="text-xs font-medium tracking-wide text-gray-600">CONTRACT / SCHEMATIC FILE</label>
+                <div className="border border-gray-300 rounded-lg p-4 bg-white flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-gray-500">description</span>
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-900">Reference Contract</p>
+                      <p className="text-[10px] text-gray-500">PDF, DWG or DOCX (Max 25MB)</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs font-bold text-red-600 hover:underline uppercase tracking-wider"
+                  >
+                    Choose File
+                  </button>
+                </div>
+                <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100 flex gap-3">
+                  <span className="material-symbols-outlined text-blue-600 text-sm">info</span>
+                  <p className="text-[11px] text-blue-800 leading-tight">
+                    Providing the maintenance contract or technical schematic speeds up verification.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Actions */}
+          <div className="p-8 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-2 text-gray-500">
+              <span
+                className="material-symbols-outlined text-sm"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                lock
+              </span>
+              <p className="text-xs">Your data is secured under our ISO-certified privacy standards.</p>
+            </div>
+            <div className="flex gap-4 w-full md:w-auto">
+              <button
+                type="reset"
+                className="flex-1 md:flex-none px-8 py-3 text-xs font-medium border border-gray-300 text-gray-900 hover:bg-gray-100 transition-colors rounded"
+              >
+                CANCEL
+              </button>
+              <button
+                type="submit"
+                className="flex-1 md:flex-none px-12 py-3 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors shadow-lg rounded"
+              >
+                SUBMIT ISSUE
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      {/* Secondary Info Cards */}
+      <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 px-4 mb-12">
+        <div className="bg-white p-6 border border-gray-200 rounded shadow-sm">
+          <span className="material-symbols-outlined text-red-600 mb-4 block">support_agent</span>
+          <h4 className="text-sm font-bold mb-2">Technical Support</h4>
+          <p className="text-xs text-gray-500">Speak directly with a technician for urgent critical failures.</p>
+          <a className="inline-block mt-4 text-xs font-bold text-red-600 border-b border-red-600" href="#">
+            CALL NOW
+          </a>
+        </div>
+        <div className="bg-white p-6 border border-gray-200 rounded shadow-sm">
+          <span className="material-symbols-outlined text-red-600 mb-4 block">timer</span>
+          <h4 className="text-sm font-bold mb-2">Response Time</h4>
+          <p className="text-xs text-gray-500">Average response within 4 hours for level 4-5 issues.</p>
+          <a className="inline-block mt-4 text-xs font-bold text-red-600 border-b border-red-600" href="#">
+            SLA DETAILS
+          </a>
+        </div>
+        <div className="bg-white p-6 border border-gray-200 rounded shadow-sm">
+          <span className="material-symbols-outlined text-red-600 mb-4 block">track_changes</span>
+          <h4 className="text-sm font-bold mb-2">Track Status</h4>
+          <p className="text-xs text-gray-500">Use your ticket ID sent via email to track repair progress.</p>
+          <a className="inline-block mt-4 text-xs font-bold text-red-600 border-b border-red-600" href="#">
+            TRACK ISSUE
+          </a>
+        </div>
+      </div>
+    </>
+  )
+}
+
+export default Report
