@@ -5,6 +5,7 @@ const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { to: '/admin/tickets', label: 'Ticket Management', icon: 'confirmation_number' },
   { to: '/admin/categories', label: 'Categories', icon: 'category' },
+  { to: '/admin/users', label: 'Staff', icon: 'group' },
   { to: '/admin/reports', label: 'Reports', icon: 'analytics' },
 ]
 
