@@ -1,6 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { extractSlugFromHost } from '../hooks/useTenant'
+
+interface Category {
+  id: string
+  name: string
+}
 
 interface FormState {
   fullName: string
@@ -9,6 +14,7 @@ interface FormState {
   companyName: string
   generalLocation: string
   issueCategory: string
+  categoryId: string
   specificLocation: string
   description: string
   urgency: number
@@ -21,6 +27,7 @@ const initialForm: FormState = {
   companyName: '',
   generalLocation: '',
   issueCategory: '',
+  categoryId: '',
   specificLocation: '',
   description: '',
   urgency: 3,
@@ -37,13 +44,24 @@ function Report() {
   const [contractFile, setContractFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
 
-  const categoryLabels: Record<string, string> = {
-    mechanical: 'Mechanical Failure',
-    electrical: 'Electrical Malfunction',
-    structural: 'Structural Damage',
-    hvac: 'HVAC Issues',
-    other: 'Other',
-  }
+  // Categories from API
+  const [categories, setCategories] = useState<Category[]>([])
+
+  useEffect(() => {
+    const slug = extractSlugFromHost()
+    if (!slug) return
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    fetch(`${API_BASE}/api/categories`, {
+      headers: { 'X-Org-Slug': slug },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setCategories(json.data)
+      })
+      .catch(() => {})
+  }, [])
+
+  const selectedCategoryName = categories.find((c) => c.id === form.categoryId)?.name || ''
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -72,11 +90,12 @@ function Report() {
 
       // Build FormData for multipart upload
       const formData = new FormData()
-      formData.append('title', `${form.issueCategory ? (categoryLabels[form.issueCategory] || form.issueCategory) : 'Uncategorized'} Issue`)
+      formData.append('title', selectedCategoryName ? `${selectedCategoryName} Issue` : 'New Issue')
       formData.append('description', form.description)
       formData.append('guestName', form.fullName)
       formData.append('guestEmail', form.email)
       formData.append('guestPhone', form.phoneNumber)
+      if (form.categoryId) formData.append('categoryId', form.categoryId)
       images.forEach((file) => formData.append('files', file))
       if (contractFile) formData.append('files', contractFile)
 
@@ -219,17 +238,15 @@ function Report() {
                 <div className="space-y-2">
                   <label className="text-xs font-medium tracking-wide text-gray-600">ISSUE CATEGORY</label>
                   <select
-                    name="issueCategory"
-                    value={form.issueCategory}
+                    name="categoryId"
+                    value={form.categoryId}
                     onChange={handleChange}
                     className="w-full h-12 px-4 border border-gray-300 rounded focus:ring-1 focus:ring-red-600 focus:border-red-600 bg-white outline-none transition-all appearance-none"
                   >
                     <option value="">Select Category</option>
-                    <option value="mechanical">Mechanical Failure</option>
-                    <option value="electrical">Electrical Malfunction</option>
-                    <option value="structural">Structural Damage</option>
-                    <option value="hvac">HVAC Issues</option>
-                    <option value="other">Other</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
