@@ -152,7 +152,7 @@ async function getById(req, res, next) {
  */
 async function update(req, res, next) {
   try {
-    const ticket = await ticketService.update(req.params.id, req.body, req.user.organizationId);
+    const ticket = await ticketService.update(req.params.id, req.body, req.user.organizationId, req.user.role);
     return res.json({ success: true, data: ticket, error: null });
   } catch (err) {
     const status = err.status || 500;
@@ -179,4 +179,18 @@ async function addComment(req, res, next) {
   }
 }
 
-module.exports = { createPublic, create, trackGet, trackReply, list, getById, update, addComment };
+/**
+ * POST /api/tickets/rate/:publicToken
+ * Guest rates a resolved ticket (no auth).
+ */
+async function rate(req, res, next) {
+  try {
+    const result = await ticketService.rateTicket(req.params.publicToken, req.body.rating);
+    return res.json({ success: true, data: result, error: null });
+  } catch (err) {
+    const status = err.status || 500;
+    return res.status(status).json({ success: false, data: null, error: err.message });
+  }
+}
+
+module.exports = { createPublic, create, trackGet, trackReply, list, getById, update, addComment, rate };

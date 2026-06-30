@@ -311,7 +311,7 @@ async function createStaff({
 /**
  * Update a ticket's status, category, or assignment.
  */
-async function update(id, data, organizationId) {
+async function update(id, data, organizationId, actorRole) {
   const ticket = await prisma.ticket.findFirst({ where: { id, organizationId } });
   if (!ticket) {
     const err = new Error("Ticket not found");
@@ -328,8 +328,16 @@ async function update(id, data, organizationId) {
       err.status = 400;
       throw err;
     }
+    // Only OWNER/ADMIN can set CLOSED
+    if (data.status === "CLOSED" && actorRole !== "OWNER" && actorRole !== "ADMIN") {
+      const err = new Error("Only administrators can close tickets");
+      err.status = 403;
+      throw err;
+    }
     updates.status = data.status;
-    if (data.status === "RESOLVED") updates.resolvedAt = new Date();
+    if (data.status === "RESOLVED") {
+      updates.resolvedAt = new Date();
+    }
   }
 
   if (data.categoryId !== undefined) {
@@ -358,13 +366,55 @@ async function update(id, data, organizationId) {
 
   if (Object.keys(updates).length === 0) return ticket;
 
-  return prisma.ticket.update({
+  const updated = await prisma.ticket.update({
     where: { id },
     data: updates,
     include: {
       category: { select: { id: true, name: true } },
       assignedAgent: { select: { id: true, name: true, email: true } },
     },
+  });
+
+  // If resolved, log rating request email
+  if (data.status === "RESOLVED" && ticket.guestEmail) {
+    const ratingLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/track/${ticket.publicToken}`;
+    console.log(`[EMAIL] To: ${ticket.guestEmail} — Ticket #${ticket.id} resolved. Please rate your experience:`);
+    console.log(`[EMAIL] Rating link: ${ratingLink}`);
+  }
+
+  return updated;
+}
+
+/**
+ * Rate a resolved ticket (guest — no auth).
+ */
+async function rateTicket(publicToken, rating) {
+  const ticket = await prisma.ticket.findUnique({ where: { publicToken } });
+  if (!ticket) {
+    const err = new Error("Ticket not found");
+    err.status = 404;
+    throw err;
+  }
+  if (ticket.status !== "RESOLVED") {
+    const err = new Error("Only resolved tickets can be rated");
+    err.status = 400;
+    throw err;
+  }
+  if (ticket.rating) {
+    const err = new Error("Ticket already rated");
+    err.status = 400;
+    throw err;
+  }
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    const err = new Error("Rating must be an integer between 1 and 5");
+    err.status = 400;
+    throw err;
+  }
+
+  return prisma.ticket.update({
+    where: { id: ticket.id },
+    data: { rating, status: "CLOSED" },
+    select: { id: true, status: true, rating: true },
   });
 }
 
@@ -421,4 +471,4 @@ async function addComment(ticketId, { userId, body, isInternal, notifyGuest }, o
   return { comment, notification };
 }
 
-module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken, list, getById, update, addComment };
+module.exports = { createPublic, createStaff, getByPublicToken, replyByPublicToken, list, getById, update, addComment, rateTicket };

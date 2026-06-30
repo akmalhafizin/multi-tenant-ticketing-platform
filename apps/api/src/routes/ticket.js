@@ -18,5 +18,6 @@ router.post("/:id/comments", authenticate, ticketController.addComment);
 // Guest tracking (public — no auth)
 router.get("/track/:publicToken", ticketController.trackGet);
 router.post("/track/:publicToken/reply", ticketController.trackReply);
+router.post("/rate/:publicToken", ticketController.rate);
 
 module.exports = router;

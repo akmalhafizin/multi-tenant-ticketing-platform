@@ -12,6 +12,7 @@ async function getById(organizationId) {
       slug: true,
       welcomeMessage: true,
       defaultCategoryId: true,
+      resolutionSlaHours: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -52,6 +53,10 @@ async function update(organizationId, data) {
     updates.slug = data.slug.trim();
   }
 
+  if (data.resolutionSlaHours !== undefined) {
+    updates.resolutionSlaHours = data.resolutionSlaHours ? parseInt(data.resolutionSlaHours) : null;
+  }
+
   if (data.welcomeMessage !== undefined) {
     updates.welcomeMessage = data.welcomeMessage.trim() || null;
   }
@@ -86,6 +91,7 @@ async function update(organizationId, data) {
       slug: true,
       welcomeMessage: true,
       defaultCategoryId: true,
+      resolutionSlaHours: true,
       createdAt: true,
       updatedAt: true,
     },

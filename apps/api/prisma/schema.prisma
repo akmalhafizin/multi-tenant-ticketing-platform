@@ -56,8 +56,9 @@ model Organization {
   slug String @unique
 
   // optional branding/config shown on the public submission form
-  welcomeMessage    String?
-  defaultCategoryId String?
+  welcomeMessage       String?
+  defaultCategoryId    String?
+  resolutionSlaHours   Int?     // target hours to resolve a ticket
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -218,6 +219,7 @@ model Ticket {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   resolvedAt DateTime?
+  rating     Int?      // guest rating 1-5 after resolution
 
   organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   // composite FK: enforces categoryId must belong to the SAME organizationId
