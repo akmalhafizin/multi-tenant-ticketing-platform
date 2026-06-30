@@ -67,12 +67,12 @@ export default function AdminTicketDetail() {
   async function handleUpdate(fields: Record<string, any>) {
     if (!id) return
     try {
-      const res = await api<TicketDetail>(`/api/tickets/${id}`, {
+      await api(`/api/tickets/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(fields),
       })
-      setTicket(res.data)
       showSuccess('Updated')
+      await fetchTicket()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update failed')
     }
