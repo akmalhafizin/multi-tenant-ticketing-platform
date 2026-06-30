@@ -9,6 +9,7 @@ import Login from './pages/Login'
 import AdminLayout from './AdminLayout'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminTickets from './pages/AdminTickets'
+import AdminTicketDetail from './pages/AdminTicketDetail'
 import AdminReports from './pages/AdminReports'
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="tickets" element={<AdminTickets />} />
+          <Route path="tickets/:id" element={<AdminTicketDetail />} />
           <Route path="reports" element={<AdminReports />} />
         </Route>
       </Routes>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 type Status = 'pending' | 'in-progress' | 'completed'
 
@@ -146,9 +147,12 @@ function AdminTickets() {
               {tickets.map((ticket) => (
                 <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
-                    <a className="text-red-600 font-bold hover:underline" href="#">
+                    <Link
+                      to={`/admin/tickets/${ticket.id.replace('#RCL-', 'RCL-')}`}
+                      className="text-red-600 font-bold hover:underline"
+                    >
                       {ticket.id}
-                    </a>
+                    </Link>
                   </td>
                   <td className="px-6 py-4 text-gray-600 text-base">{ticket.date}</td>
                   <td className="px-6 py-4">
@@ -182,7 +186,12 @@ function AdminTickets() {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-red-600 hover:text-red-700 font-bold text-sm">View Details</button>
+                    <Link
+                      to={`/admin/tickets/${ticket.id.replace('#RCL-', 'RCL-')}`}
+                      className="text-red-600 hover:text-red-700 font-bold text-sm"
+                    >
+                      View Details
+                    </Link>
                   </td>
                 </tr>
               ))}
