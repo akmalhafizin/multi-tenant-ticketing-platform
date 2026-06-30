@@ -155,6 +155,8 @@ export default function AdminSettings() {
               Your public submission form will be at{' '}
               <span className="font-mono text-red-600">{slug || '{slug}'}.lvh.me/report</span>
             </p>
+          </div>
+
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-gray-600">
               Resolution SLA (hours)
