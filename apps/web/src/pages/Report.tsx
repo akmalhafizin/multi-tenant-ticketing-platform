@@ -32,6 +32,11 @@ function Report() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  // File uploads
+  const [images, setImages] = useState<File[]>([])
+  const [contractFile, setContractFile] = useState<File | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+
   const categoryLabels: Record<string, string> = {
     mechanical: 'Mechanical Failure',
     electrical: 'Electrical Malfunction',
@@ -57,7 +62,7 @@ function Report() {
 
     try {
       const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const headers: Record<string, string> = {}
 
       // Inject org slug from subdomain
       const slug = extractSlugFromHost()
@@ -65,16 +70,20 @@ function Report() {
         headers['X-Org-Slug'] = slug
       }
 
+      // Build FormData for multipart upload
+      const formData = new FormData()
+      formData.append('title', `${form.issueCategory ? (categoryLabels[form.issueCategory] || form.issueCategory) : 'Uncategorized'} Issue`)
+      formData.append('description', form.description)
+      formData.append('guestName', form.fullName)
+      formData.append('guestEmail', form.email)
+      formData.append('guestPhone', form.phoneNumber)
+      images.forEach((file) => formData.append('files', file))
+      if (contractFile) formData.append('files', contractFile)
+
       const res = await fetch(`${API_BASE}/api/tickets/public`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({
-          title: `${form.issueCategory ? categoryLabels[form.issueCategory] || form.issueCategory : 'Uncategorized'} Issue`,
-          description: form.description,
-          guestName: form.fullName,
-          guestEmail: form.email,
-          guestPhone: form.phoneNumber,
-        }),
+        headers, // no Content-Type — browser sets it for FormData
+        body: formData,
       })
 
       const json = await res.json()
@@ -100,6 +109,8 @@ function Report() {
 
   function handleReset() {
     setForm(initialForm)
+    setImages([])
+    setContractFile(null)
   }
 
   const urgencyLabels = ['1 - Low', '2', '3 - Medium', '4', '5 - Critical']
@@ -279,7 +290,22 @@ function Report() {
               {/* Image Upload */}
               <div className="space-y-4">
                 <label className="text-xs font-medium tracking-wide text-gray-600">ISSUE PHOTOS (MULTIPLE)</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
+                <div
+                  className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${
+                    dragOver ? 'border-red-600 bg-red-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    setDragOver(false)
+                    const dropped = Array.from(e.dataTransfer.files).filter(
+                      (f) => f.type.startsWith('image/')
+                    )
+                    setImages((prev) => [...prev, ...dropped].slice(0, 5))
+                  }}
+                  onClick={() => document.getElementById('image-input')?.click()}
+                >
                   <span className="material-symbols-outlined text-4xl text-gray-500 mb-2 group-hover:text-red-600 transition-colors">
                     add_a_photo
                   </span>
@@ -287,25 +313,96 @@ function Report() {
                     Drag &amp; drop or <span className="text-red-600 font-semibold">browse</span>
                   </p>
                   <p className="text-xs text-gray-500 mt-1">Upload up to 5 clear images (JPG, PNG)</p>
+                  <input
+                    id="image-input"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.files || [])
+                      setImages((prev) => [...prev, ...selected].slice(0, 5))
+                      e.target.value = ''
+                    }}
+                  />
                 </div>
+                {/* Image Previews */}
+                {images.length > 0 && (
+                  <div className="flex flex-wrap gap-3">
+                    {images.map((img, i) => (
+                      <div key={i} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                        <img
+                          src={URL.createObjectURL(img)}
+                          alt={img.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                          className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <span className="material-symbols-outlined text-xs">close</span>
+                        </button>
+                        <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[8px] px-1 py-0.5 truncate text-center">
+                          {img.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               {/* Contract/File Upload */}
               <div className="space-y-4">
                 <label className="text-xs font-medium tracking-wide text-gray-600">CONTRACT / SCHEMATIC FILE</label>
-                <div className="border border-gray-300 rounded-lg p-4 bg-white flex items-center justify-between">
+                <div
+                  className="border border-gray-300 rounded-lg p-4 bg-white flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => document.getElementById('contract-input')?.click()}
+                >
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-gray-500">description</span>
+                    <span className="material-symbols-outlined text-gray-500">
+                      {contractFile ? 'description' : 'upload_file'}
+                    </span>
                     <div className="text-left">
-                      <p className="text-sm font-medium text-gray-900">Reference Contract</p>
-                      <p className="text-[10px] text-gray-500">PDF, DWG or DOCX (Max 25MB)</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {contractFile ? contractFile.name : 'Reference Contract'}
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {contractFile
+                          ? `${(contractFile.size / 1024 / 1024).toFixed(1)} MB`
+                          : 'PDF, DWG or DOCX (Max 25MB)'}
+                      </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="text-xs font-bold text-red-600 hover:underline uppercase tracking-wider"
-                  >
-                    Choose File
-                  </button>
+                  {contractFile ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setContractFile(null)
+                      }}
+                      className="text-xs font-bold text-red-600 hover:underline uppercase tracking-wider"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-xs font-bold text-red-600 hover:underline uppercase tracking-wider"
+                    >
+                      Choose File
+                    </button>
+                  )}
+                  <input
+                    id="contract-input"
+                    type="file"
+                    accept=".pdf,.dwg,.docx,.doc,.zip,.rar"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) setContractFile(file)
+                      e.target.value = ''
+                    }}
+                  />
                 </div>
                 <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100 flex gap-3">
                   <span className="material-symbols-outlined text-blue-600 text-sm">info</span>
