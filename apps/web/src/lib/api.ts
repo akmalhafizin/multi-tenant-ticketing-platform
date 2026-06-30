@@ -1,6 +1,6 @@
 import { extractSlugFromHost } from '../hooks/useTenant'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export async function api<T = unknown>(
   path: string,

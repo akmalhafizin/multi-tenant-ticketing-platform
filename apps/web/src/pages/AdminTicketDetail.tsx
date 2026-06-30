@@ -27,7 +27,7 @@ interface TicketDetail {
 const STATUS_OPTIONS = ['OPEN', 'PENDING', 'ON_HOLD', 'RESOLVED', 'CLOSED']
 const statusMap: Record<string, TicketStatus> = { OPEN: 'open', PENDING: 'pending', ON_HOLD: 'on_hold', RESOLVED: 'resolved', CLOSED: 'closed' }
 const priorityMap: Record<string, TicketPriority> = { LOW: 'low', MEDIUM: 'medium', HIGH: 'high', URGENT: 'urgent' }
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 export default function AdminTicketDetail() {
   const { id } = useParams<{ id: string }>()

@@ -36,7 +36,7 @@ function Login() {
     setSubmitting(true)
 
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      const API_BASE = import.meta.env.VITE_API_URL || ''
       await fetch(`${API_BASE}/api/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

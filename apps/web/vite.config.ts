@@ -13,10 +13,18 @@ export default defineConfig({
   server: {
     // Listen on all interfaces so subdomains (lvh.me → 127.0.0.1) work
     host: '0.0.0.0',
+    // Proxy API requests to backend in dev mode
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
     // Allow subdomain access via *.lvh.me and custom hosts
     allowedHosts: [
       '.lvh.me',     // any-subdomain.lvh.me
       '.localhost',  // any-subdomain.localhost
+      '.trycloudflare.com', // cloudflare tunnels
     ],
   },
 })

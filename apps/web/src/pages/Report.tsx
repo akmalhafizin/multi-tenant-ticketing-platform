@@ -50,7 +50,7 @@ function Report() {
   useEffect(() => {
     const slug = extractSlugFromHost()
     if (!slug) return
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    const API_BASE = import.meta.env.VITE_API_URL || ''
     fetch(`${API_BASE}/api/categories`, {
       headers: { 'X-Org-Slug': slug },
     })
@@ -79,7 +79,7 @@ function Report() {
     setError('')
 
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      const API_BASE = import.meta.env.VITE_API_URL || ''
       const headers: Record<string, string> = {}
 
       // Inject org slug from subdomain
