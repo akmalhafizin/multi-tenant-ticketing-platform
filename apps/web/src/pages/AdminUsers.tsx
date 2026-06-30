@@ -188,7 +188,16 @@ export default function AdminUsers() {
                     <span className="text-xs font-mono text-gray-700 truncate flex-1 select-all">{successMsg.replace('Invite sent! Link: ', '')}</span>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(successMsg.replace('Invite sent! Link: ', ''))
+                        const link = successMsg.replace('Invite sent! Link: ', '')
+                        // Fallback copy that works on all origins
+                        const ta = document.createElement('textarea')
+                        ta.value = link
+                        ta.style.position = 'fixed'
+                        ta.style.opacity = '0'
+                        document.body.appendChild(ta)
+                        ta.select()
+                        document.execCommand('copy')
+                        document.body.removeChild(ta)
                         const btn = document.getElementById('copy-btn')
                         if (btn) btn.textContent = 'Copied!'
                       }}
