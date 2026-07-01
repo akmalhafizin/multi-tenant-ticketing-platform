@@ -2,7 +2,8 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads");
+// Upload directory — configurable via env, defaults to C:/uploads
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join("C:", "uploads");
 
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {

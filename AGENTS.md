@@ -151,6 +151,20 @@ Examples:
 - `git add -A && git commit -m "feat: add AdminTicketDetail page with timeline and reply form"`
 - `git add -A && git commit -m "feat: add Reports page with KPI cards and category chart"`
 
+### Running Services (CRITICAL)
+
+Three processes must stay running for the app to work:
+
+| Process | Command | Port | Purpose |
+|---------|---------|------|---------|
+| **API** | `cd apps/api && npm run dev` | 3001 | Backend server |
+| **Frontend** | `cd apps/web && npm run dev` | 5173 | Dev server / Vite |
+| **Tunnel** | `cloudflared tunnel --url http://localhost:5173` | — | Public access |
+
+**NEVER run `taskkill //F //IM node.exe`** — it kills ALL Node.js processes including the frontend, API, and any active Hermes agent sessions. Instead, kill specific processes by PID or use the terminal's Ctrl+C in the correct window.
+
+When working with agents (AI), be aware that agent-managed background processes may die when the agent's session ends. Always run services in your own terminal windows for persistent uptime.
+
 ---
 
 # 11. SaaS Product Rules

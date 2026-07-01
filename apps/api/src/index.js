@@ -21,7 +21,8 @@ app.use(express.json());
 app.use(resolveTenant);
 
 // ─── Serve uploaded files ─────────────────────────────────────
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join("C:", "uploads");
+app.use("/uploads", express.static(UPLOAD_DIR));
 
 // ─── Routes ──────────────────────────────────────────────────────
 app.get("/", (req, res) => {
