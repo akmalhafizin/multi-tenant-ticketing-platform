@@ -1,21 +1,18 @@
 import { defineConfig } from 'vite'
-import react, { reactCompilerPreset } from '@vitejs/plugin-react'
-import babel from '@rolldown/plugin-babel'
-import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    babel({ presets: [reactCompilerPreset()] }),
-    tailwindcss()
-  ],
+  plugins: [react()],
   server: {
     // Listen on all interfaces so subdomains (lvh.me → 127.0.0.1) work
     host: '0.0.0.0',
-    // Proxy API requests to backend in dev mode
+    // Proxy API and upload requests to backend in dev mode
     proxy: {
       '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/uploads': {
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
