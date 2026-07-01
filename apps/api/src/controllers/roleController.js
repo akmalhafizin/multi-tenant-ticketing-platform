@@ -21,7 +21,11 @@ async function getById(req, res, next) {
 
 async function create(req, res, next) {
   try {
-    const role = await roleService.create({ ...req.body, organizationId: req.user.organizationId });
+    const { name, description, permissions } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, data: null, error: "Role name is required" });
+    }
+    const role = await roleService.create({ organizationId: req.user.organizationId, name: name.trim(), description, permissions });
     return res.status(201).json({ success: true, data: role, error: null });
   } catch (err) {
     const status = err.status || 500;
@@ -31,7 +35,14 @@ async function create(req, res, next) {
 
 async function update(req, res, next) {
   try {
-    const role = await roleService.update(req.params.id, req.body, req.user.organizationId);
+    const { name, description, permissions } = req.body;
+    const updates = {};
+    if (name !== undefined) updates.name = name.trim();
+    if (description !== undefined) updates.description = description;
+    if (permissions !== undefined) updates.permissions = permissions;
+    // Prevent overriding system-protected fields via mass assignment
+    updates.isSystem = undefined;
+    const role = await roleService.update(req.params.id, req.user.organizationId, updates);
     return res.json({ success: true, data: role, error: null });
   } catch (err) {
     const status = err.status || 500;

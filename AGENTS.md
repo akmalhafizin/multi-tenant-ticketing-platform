@@ -167,6 +167,54 @@ When working with agents (AI), be aware that agent-managed background processes 
 
 ---
 
+# 14. Security Rules (CRITICAL — apply on every new project)
+
+## Production Checklist
+
+| Rule | Implementation |
+|------|---------------|
+| **Helmet** | `npm install helmet` + `app.use(helmet())` — sets security headers |
+| **CORS locked** | `cors({ origin: process.env.FRONTEND_URL })` — never wide open |
+| **Rate limiting** | `express-rate-limit` on `/login` — 5 req/min |
+| **JWT secret** | Must come from env, crash if missing: `if (!JWT_SECRET) process.exit(1)` |
+| **Input validation** | Never pass `req.body` directly to service — destructure known fields only |
+| **Mass assignment** | Block `isSystem`, `role`, `organizationId` from user input |
+| **File upload** | Whitelist extensions + file size limit in multer config |
+| **Password hashing** | bcrypt (never plaintext) |
+| **Email enumeration** | Forgot-password: return same message whether email exists or not |
+| **Error messages** | Never leak internals — generic "Invalid credentials" |
+
+## Forbidden
+
+- `req.body` passed directly to Prisma/Service (mass assignment vector)
+- Hardcoded secrets or fallback defaults (JWT_SECRET, DB passwords)
+- Open CORS (`app.use(cors())` with no origin)
+- No rate limiting on auth endpoints
+- Storing passwords in plaintext
+- Exposing stack traces in error responses
+
+## Always Apply
+
+```js
+// index.js template
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
+app.use(helmet());
+app.use(cors({ origin: process.env.FRONTEND_URL }));
+app.use("/api/auth/login", rateLimit({ windowMs: 60_000, max: 5 }));
+
+// Controller validation pattern — never pass req.body raw
+const { allowedField1, allowedField2 } = req.body;
+const updates = {};
+if (allowedField1 !== undefined) updates.allowedField1 = allowedField1;
+// Block protected fields explicitly
+updates.role = undefined;
+return res.json({ data: await service.update(id, updates) });
+```
+
+---
+
 # 11. SaaS Product Rules
 
 - Everything is multi-tenant by default
