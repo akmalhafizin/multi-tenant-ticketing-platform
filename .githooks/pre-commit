@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Pre-commit hook — runs Playwright E2E tests before every commit.
+# Won't block on unstaged changes that don't affect frontend/backend code.
+#
+# To install: git config core.hooksPath .githooks
+#
+# Skip with: git commit --no-verify  (only use for docs/readme changes)
+
+echo "╔══════════════════════════════════════════════╗"
+echo "║  Running E2E tests before commit...         ║"
+echo "╚══════════════════════════════════════════════╝"
+
+# Check what files changed — skip if only docs/markdown
+STAGED=$(git diff --cached --name-only | grep -vE '\.md$|\.txt$|\.gitignore|AGENTS\.md' || true)
+if [ -z "$STAGED" ]; then
+  echo "→ Only docs changed, skipping E2E tests."
+  exit 0
+fi
+
+# Check services are running
+if ! curl -sf http://localhost:3001/ > /dev/null 2>&1; then
+  echo "✗ API not running. Start it: cd apps/api && npm run dev"
+  echo "  Then retry the commit."
+  exit 1
+fi
+
+if ! curl -sf http://localhost:5173/ > /dev/null 2>&1; then
+  echo "✗ Frontend not running. Start it: cd apps/web && npm run dev"
+  echo "  Then retry the commit."
+  exit 1
+fi
+
+# Run the E2E test suite
+echo "→ Running Playwright E2E tests..."
+npx playwright test --reporter=line
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "✗ E2E TESTS FAILED — commit blocked."
+  echo "  Fix the failures or skip with: git commit --no-verify"
+  echo "  (Only skip for non-code changes like docs)"
+  exit 1
+fi
+
+echo ""
+echo "✓ All E2E tests passed. Committing..."
+exit 0

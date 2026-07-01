@@ -152,6 +152,32 @@ When the feature touches both frontend and backend:
 6. Build frontend page
 7. Test with sample data
 
+### E2E Testing
+
+All commits run Playwright E2E tests via pre-commit hook (installed at `.githooks/pre-commit`).
+
+**Run tests manually:**
+```bash
+npm test              # full suite (headless)
+npm run test:e2e:ui   # interactive browser
+```
+
+**Test files** live in `e2e/` at the project root:
+| File | What it covers |
+|------|---------------|
+| `auth.spec.ts` | Login, logout, wrong credentials |
+| `guest-flow.spec.ts` | Public submit, track, reply |
+| `admin-tickets.spec.ts` | Ticket list, detail, status change, comments |
+| `permissions.spec.ts` | AGENT blocked from Staff/Roles/Settings |
+
+**Pre-commit hook** runs automatically on `git commit`. Blocks if tests fail.
+Skip with `git commit --no-verify` (only for docs/readme-only changes).
+
+**Requirements for tests:**
+- API running on `localhost:3001`
+- Frontend running on `localhost:5173`
+- Seeded data present (run `npm run seed` once)
+
 > This workflow applies to every task — even small changes. No code without an approved plan.
 
 ### Commit Discipline
