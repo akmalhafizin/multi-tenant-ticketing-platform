@@ -96,4 +96,4 @@ async function uploadRaw({ bucket, key, buffer, mimeType }) {
   }));
 }
 
-module.exports = { ensureBucket, upload, getFile, remove, uploadRaw };
+module.exports = { ensureBucket, upload, getFile, uploadRaw };

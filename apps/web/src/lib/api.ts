@@ -30,5 +30,3 @@ export async function api<T = unknown>(
 
   return json
 }
-
-export default API_BASE

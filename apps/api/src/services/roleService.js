@@ -162,4 +162,4 @@ function mergePermissions(base, override) {
   };
 }
 
-module.exports = { seedDefaults, list, getById, create, update, remove, SYSTEM_ROLES };
+module.exports = { seedDefaults, list, getById, create, update, remove };

@@ -69,4 +69,4 @@ async function resolveTenant(req, res, next) {
   }
 }
 
-module.exports = { resolveTenant, extractSlug };
+module.exports = { resolveTenant };

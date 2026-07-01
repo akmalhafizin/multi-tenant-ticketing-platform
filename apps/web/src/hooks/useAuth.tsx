@@ -1,18 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { api } from '../lib/api'
 
-export interface AuthUser {
-  id: string
-  email: string
-  name: string | null
-  role: 'OWNER' | 'ADMIN' | 'AGENT'
-  organizationId: string
-  organization: {
-    id: string
-    name: string
-    slug: string
-  }
-}
+
 
 interface AuthContextType {
   user: AuthUser | null

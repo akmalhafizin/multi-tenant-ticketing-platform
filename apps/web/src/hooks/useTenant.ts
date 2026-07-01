@@ -35,6 +35,4 @@ export function extractSlugFromHost(): string | null {
 /**
  * React hook that provides the current tenant slug from the subdomain.
  */
-export function useTenant() {
-  return { slug: extractSlugFromHost() }
-}
+
