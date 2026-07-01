@@ -136,12 +136,23 @@ Example endpoints:
 
 Before implementing any feature:
 
+1. **Write a plan** in `.hermes/plans/` as a markdown file
+2. **Present the plan** to the user for review and approval
+3. **Wait for explicit approval** before writing any code
+4. **Commit per unit** (one commit per component/page)
+
+### Data-first ordering
+
+When the feature touches both frontend and backend:
 1. Define data model (Prisma)
 2. Run migration
 3. Implement service layer
 4. Build controller
 5. Build route
-6. Test with sample data
+6. Build frontend page
+7. Test with sample data
+
+> This workflow applies to every task — even small changes. No code without an approved plan.
 
 ### Commit Discipline
 
