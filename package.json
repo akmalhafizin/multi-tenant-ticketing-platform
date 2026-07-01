@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "check": "npm run check:types && npm run check:lint && npm run check:audit",
+    "check:types": "cd apps/web && npx tsc --noEmit",
+    "check:lint": "cd apps/web && npx eslint src/",
+    "check:audit": "npm audit --audit-level=moderate && cd apps/api && npm audit --audit-level=moderate",
     "test:e2e": "npx playwright test",
     "test:e2e:ui": "npx playwright test --ui",
-    "pretest:e2e": "echo 'Checking services...' && curl -sf http://localhost:3001/ > /dev/null 2>&1 && echo 'API: OK' && curl -sf http://localhost:5173/ > /dev/null 2>&1 && echo 'Frontend: OK' || (echo 'Start services first' && exit 1)",
-    "test": "npm run test:e2e"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.61.1"
+    "test:api": "npx playwright test e2e/api.spec.ts",
+    "test": "npm run check && npm run test:e2e",
+    "pretest:e2e": "echo 'Services must be running: localhost:3001 + localhost:5173'"
   }
 }

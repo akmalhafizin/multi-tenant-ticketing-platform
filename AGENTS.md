@@ -154,21 +154,32 @@ When the feature touches both frontend and backend:
 
 ### E2E Testing
 
-All commits run Playwright E2E tests via pre-commit hook (installed at `.githooks/pre-commit`).
+All commits run automated checks via pre-commit hook (installed at `.githooks/pre-commit`).
 
-**Run tests manually:**
+**Check sequence on every commit:**
+```
+1. npm audit          → 0 critical/moderate vulns
+2. tsc --noEmit       → no TypeScript errors
+3. eslint src/        → no lint errors
+4. Service health     → API + frontend responding
+5. Playwright E2E     → 30+ tests pass
+```
+
+**Run checks manually:**
 ```bash
-npm test              # full suite (headless)
-npm run test:e2e:ui   # interactive browser
+npm check               # types + lint + audit (fast)
+npm test                # full suite
+npm run test:api        # API integration tests only (fastest)
+npm run test:e2e:ui     # interactive browser
 ```
 
 **Test files** live in `e2e/` at the project root:
-| File | What it covers |
-|------|---------------|
-| `auth.spec.ts` | Login, logout, wrong credentials |
-| `guest-flow.spec.ts` | Public submit, track, reply |
-| `admin-tickets.spec.ts` | Ticket list, detail, status change, comments |
-| `permissions.spec.ts` | AGENT blocked from Staff/Roles/Settings |
+| File | What it covers | Type |
+|------|---------------|------|
+| `api.spec.ts` | All API endpoints — auth, tickets, categories, roles, invites | API (fast) |
+| `auth.spec.ts` | Login, logout, wrong credentials | Browser |
+| `admin-tickets.spec.ts` | Ticket list, detail, status change, comments | Browser |
+| `permissions.spec.ts` | AGENT blocked from Staff/Roles/Settings | Browser |
 
 **Pre-commit hook** runs automatically on `git commit`. Blocks if tests fail.
 Skip with `git commit --no-verify` (only for docs/readme-only changes).

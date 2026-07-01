@@ -1,47 +1,78 @@
 #!/usr/bin/env bash
-# Pre-commit hook — runs Playwright E2E tests before every commit.
-# Won't block on unstaged changes that don't affect frontend/backend code.
+# Pre-commit hook — runs type check, lint, audit, and E2E tests.
+# Blocks commit if any check fails.
 #
-# To install: git config core.hooksPath .githooks
-#
-# Skip with: git commit --no-verify  (only use for docs/readme changes)
+# Install: git config core.hooksPath .githooks
+# Skip:    git commit --no-verify (docs/readme-only)
+
+set -e
 
 echo "╔══════════════════════════════════════════════╗"
-echo "║  Running E2E tests before commit...         ║"
+echo "║  Pre-commit checks                           ║"
 echo "╚══════════════════════════════════════════════╝"
 
-# Check what files changed — skip if only docs/markdown
-STAGED=$(git diff --cached --name-only | grep -vE '\.md$|\.txt$|\.gitignore|AGENTS\.md' || true)
+# ── Skip if only docs changed ──────────────────────────────────
+STAGED=$(git diff --cached --name-only | grep -vE '\.md$|\.txt$|\.gitignore|AGENTS\.md|\.hermes/' || true)
 if [ -z "$STAGED" ]; then
-  echo "→ Only docs changed, skipping E2E tests."
+  echo "→ Only docs changed, skipping checks."
   exit 0
 fi
 
-# Check services are running
-if ! curl -sf http://localhost:3001/ > /dev/null 2>&1; then
-  echo "✗ API not running. Start it: cd apps/api && npm run dev"
-  echo "  Then retry the commit."
-  exit 1
-fi
+ROOT=$(git rev-parse --show-toplevel)
+FAILED=0
 
-if ! curl -sf http://localhost:5173/ > /dev/null 2>&1; then
-  echo "✗ Frontend not running. Start it: cd apps/web && npm run dev"
-  echo "  Then retry the commit."
-  exit 1
-fi
-
-# Run the E2E test suite
-echo "→ Running Playwright E2E tests..."
-npx playwright test --reporter=line
-
-if [ $? -ne 0 ]; then
+# ── Helper ──────────────────────────────────────────────────────
+check() {
+  local name=$1
+  shift
   echo ""
-  echo "✗ E2E TESTS FAILED — commit blocked."
-  echo "  Fix the failures or skip with: git commit --no-verify"
-  echo "  (Only skip for non-code changes like docs)"
-  exit 1
+  echo "━━━ $name ━━━"
+  if "$@"; then
+    echo "  ✓ $name passed"
+  else
+    echo "  ✗ $name FAILED"
+    FAILED=1
+  fi
+}
+
+# ── 1. npm audit ────────────────────────────────────────────────
+check "npm audit" npx --prefix "$ROOT" audit --audit-level=moderate 2>/dev/null || \
+  check "npm audit (api)" npx --prefix "$ROOT/apps/api" audit --audit-level=moderate 2>/dev/null
+
+# ── 2. TypeScript check (frontend) ──────────────────────────────
+check "TypeScript" npx --prefix "$ROOT/apps/web" tsc --noEmit
+
+# ── 3. ESLint (frontend) ────────────────────────────────────────
+check "ESLint" npx --prefix "$ROOT/apps/web" eslint src/
+
+# ── 4. Check services are running ────────────────────────────────
+echo ""
+echo "━━━ Service health ━━━"
+if curl -sf http://localhost:3001/ > /dev/null 2>&1; then
+  echo "  ✓ API (port 3001)"
+else
+  echo "  ✗ API not running — start: cd apps/api && npm run dev"
+  FAILED=1
+fi
+if curl -sf http://localhost:5173/ > /dev/null 2>&1; then
+  echo "  ✓ Frontend (port 5173)"
+else
+  echo "  ✗ Frontend not running — start: cd apps/web && npm run dev"
+  FAILED=1
 fi
 
+# ── 5. E2E tests ────────────────────────────────────────────────
+if [ $FAILED -eq 0 ]; then
+  check "E2E tests" npx playwright test --reporter=line
+fi
+
+# ── Result ──────────────────────────────────────────────────────
 echo ""
-echo "✓ All E2E tests passed. Committing..."
-exit 0
+if [ $FAILED -eq 0 ]; then
+  echo "✓ All checks passed. Committing..."
+  exit 0
+else
+  echo "✗ Some checks FAILED — commit blocked."
+  echo "  Fix issues or skip with: git commit --no-verify"
+  exit 1
+fi
