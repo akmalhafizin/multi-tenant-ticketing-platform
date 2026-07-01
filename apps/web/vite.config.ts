@@ -19,6 +19,10 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      '/uploads': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
     // Allow subdomain access via *.lvh.me and custom hosts
     allowedHosts: [
