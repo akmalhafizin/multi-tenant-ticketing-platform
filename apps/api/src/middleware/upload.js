@@ -1,37 +1,52 @@
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
+const s3 = require("../lib/s3");
 
-// Upload directory — configurable via env, defaults to C:/uploads
-const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join("C:", "uploads");
+const ALLOWED_EXTS = /\.(jpg|jpeg|png|gif|webp|pdf|dwg|docx|doc|zip|rar|txt|csv|xlsx)$/i;
+const MAX_SIZE = 25 * 1024 * 1024; // 25MB
 
-// Ensure upload directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+// Use memory storage — files stay in buffer until uploaded to S3
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_EXTS.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type not supported: ${file.originalname}`));
+    }
+  },
+  limits: { fileSize: MAX_SIZE },
+});
+
+/**
+ * Middleware that runs after multer parses the files.
+ * Uploads each file to S3 and replaces req.files entries with multer-compatible objects.
+ */
+async function uploadToS3(req, res, next) {
+  if (!req.files || req.files.length === 0) return next();
+
+  try {
+    const uploaded = [];
+    for (const file of req.files) {
+      const result = await s3.upload({
+        buffer: file.buffer,
+        fileName: file.originalname,
+        mimeType: file.mimetype,
+      });
+
+      uploaded.push({
+        ...file,
+        filename: result.key,          // S3 key — used for URL construction
+        path: `/uploads/${result.key}`, // kept for consistency
+        size: file.size,
+      });
+    }
+    req.files = uploaded;
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${unique}${ext}`);
-  },
-});
-
-const fileFilter = (_req, file, cb) => {
-  const allowed = /\.(jpg|jpeg|png|gif|webp|pdf|dwg|docx|doc|zip|rar)$/i;
-  if (allowed.test(path.extname(file.originalname))) {
-    cb(null, true);
-  } else {
-    cb(new Error("File type not supported"));
-  }
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
-});
-
-module.exports = upload;
+// Chain: multer parses → S3 uploads → controller receives populated req.files
+module.exports = { upload, uploadToS3 };

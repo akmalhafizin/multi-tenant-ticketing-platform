@@ -20,9 +20,20 @@ app.use(express.json());
 // ─── Tenant Resolution (subdomain-based) ───────────────────────
 app.use(resolveTenant);
 
-// ─── Serve uploaded files ─────────────────────────────────────
-const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join("C:", "uploads");
-app.use("/uploads", express.static(UPLOAD_DIR));
+// ─── Serve uploaded files via S3/MinIO ────────────────────────
+const s3 = require("./lib/s3");
+app.get("/uploads/:key", async (req, res, next) => {
+  try {
+    const obj = await s3.getFile(req.params.key);
+    if (!obj) return res.status(404).json({ success: false, data: null, error: "File not found" });
+
+    res.setHeader("Content-Type", obj.ContentType || "application/octet-stream");
+    res.setHeader("Content-Length", obj.ContentLength || 0);
+    obj.Body.pipe(res);
+  } catch (err) {
+    next(err);
+  }
+});
 
 // ─── Routes ──────────────────────────────────────────────────────
 app.get("/", (req, res) => {
@@ -49,6 +60,10 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, "0.0.0.0", async () => {
   console.log(`API running on port ${PORT}`);
+  // Ensure MinIO bucket exists
+  try {
+    await s3.ensureBucket();
+  } catch {}
 });

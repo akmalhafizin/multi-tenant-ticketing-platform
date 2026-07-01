@@ -5,8 +5,8 @@ const upload = require("../middleware/upload");
 
 const router = Router();
 
-// Public ticket creation — org resolved from subdomain (multipart with files)
-router.post("/public", upload.array("files", 10), ticketController.createPublic);
+// Public — file upload + S3 upload chained middleware
+router.post("/public", upload.upload.array("files", 5), upload.uploadToS3, ticketController.createPublic);
 
 // Authenticated ticket creation (staff dashboard)
 router.post("/", authenticate, ticketController.create);
