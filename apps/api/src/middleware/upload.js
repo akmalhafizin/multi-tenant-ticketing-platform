@@ -23,7 +23,9 @@ const upload = multer({
  * Uploads each file to S3 and replaces req.files entries with multer-compatible objects.
  */
 async function uploadToS3(req, res, next) {
-  if (!req.files || req.files.length === 0) return next();
+  // Normalize: support both upload.array (req.files) and upload.single (req.file)
+  const files = req.files?.length ? req.files : (req.file ? [req.file] : []);
+  if (files.length === 0) return next();
 
   // Determine org — tenant (public) or authenticated user
   const orgId = req.tenant?.id || req.user?.organizationId;

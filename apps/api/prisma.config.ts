@@ -2,6 +2,13 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Load .env from project root (two dirs up from apps/api/)
+import { config } from "dotenv";
+config({ path: path.join(__dirname, "..", "..", ".env") });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

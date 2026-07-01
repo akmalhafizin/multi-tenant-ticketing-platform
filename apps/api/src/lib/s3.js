@@ -84,4 +84,16 @@ async function remove(key) {
   }));
 }
 
-module.exports = { ensureBucket, upload, getFile, remove };
+/**
+ * Upload a file directly at a specific key (used for branding assets).
+ */
+async function uploadRaw({ bucket, key, buffer, mimeType }) {
+  await client.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: mimeType || "application/octet-stream",
+  }));
+}
+
+module.exports = { ensureBucket, upload, getFile, remove, uploadRaw };

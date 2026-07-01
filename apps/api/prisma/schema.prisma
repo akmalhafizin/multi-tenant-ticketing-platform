@@ -60,6 +60,10 @@ model Organization {
   defaultCategoryId    String?
   resolutionSlaHours   Int?     // target hours to resolve a ticket
 
+  // Branding assets (stored in MinIO bucket org_{id}/branding/)
+  logoUrl    String?   // org logo for header / public form
+  bannerUrl  String?   // header image for public form
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

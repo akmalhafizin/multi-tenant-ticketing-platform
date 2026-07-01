@@ -175,6 +175,72 @@ export default function AdminSettings() {
           </div>
         </div>
 
+        {/* Branding */}
+        <div className="bg-white border border-gray-200 rounded-xl p-8 space-y-6">
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <span className="material-symbols-outlined text-red-600">palette</span>
+            Branding
+          </h2>
+
+          {/* Logo */}
+          <div className="space-y-3">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Organization Logo</label>
+            {org?.logoUrl && (
+              <div className="mb-3">
+                <img src={org.logoUrl} alt="Logo" className="h-16 object-contain border border-gray-200 rounded-lg p-2 bg-white" />
+              </div>
+            )}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="file" accept="image/*" onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const formData = new FormData()
+                formData.append('file', file)
+                formData.append('assetType', 'logo')
+                try {
+                  const res = await fetch('/api/org/assets', { method: 'POST', body: formData })
+                  const json = await res.json()
+                  if (json.success) setOrg(json.data.org)
+                  else setError(json.error)
+                } catch (err) { setError('Upload failed') }
+              }} className="hidden" id="logo-upload" />
+              <span className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-200 cursor-pointer transition-colors">
+                Choose Logo
+              </span>
+            </label>
+            <p className="text-xs text-gray-400">Upload your organization logo. Shown in the header and public form.</p>
+          </div>
+
+          {/* Banner */}
+          <div className="space-y-3">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-600">Banner Image</label>
+            {org?.bannerUrl && (
+              <div className="mb-3">
+                <img src={org.bannerUrl} alt="Banner" className="h-24 w-full object-cover border border-gray-200 rounded-lg" />
+              </div>
+            )}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="file" accept="image/*" onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const formData = new FormData()
+                formData.append('file', file)
+                formData.append('assetType', 'banner')
+                try {
+                  const res = await fetch('/api/org/assets', { method: 'POST', body: formData })
+                  const json = await res.json()
+                  if (json.success) setOrg(json.data.org)
+                  else setError(json.error)
+                } catch (err) { setError('Upload failed') }
+              }} className="hidden" id="banner-upload" />
+              <span className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-200 cursor-pointer transition-colors">
+                Choose Banner
+              </span>
+            </label>
+            <p className="text-xs text-gray-400">Header image for the public ticket submission form.</p>
+          </div>
+        </div>
+
         {/* Public Form */}
         <div className="bg-white border border-gray-200 rounded-xl p-8 space-y-6">
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">

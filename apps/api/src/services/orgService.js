@@ -13,6 +13,8 @@ async function getById(organizationId) {
       welcomeMessage: true,
       defaultCategoryId: true,
       resolutionSlaHours: true,
+      logoUrl: true,
+      bannerUrl: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -57,6 +59,14 @@ async function update(organizationId, data) {
     updates.resolutionSlaHours = data.resolutionSlaHours ? parseInt(data.resolutionSlaHours) : null;
   }
 
+  if (data.logoUrl !== undefined) {
+    updates.logoUrl = data.logoUrl || null;
+  }
+
+  if (data.bannerUrl !== undefined) {
+    updates.bannerUrl = data.bannerUrl || null;
+  }
+
   if (data.welcomeMessage !== undefined) {
     updates.welcomeMessage = data.welcomeMessage.trim() || null;
   }
@@ -92,6 +102,8 @@ async function update(organizationId, data) {
       welcomeMessage: true,
       defaultCategoryId: true,
       resolutionSlaHours: true,
+      logoUrl: true,
+      bannerUrl: true,
       createdAt: true,
       updatedAt: true,
     },
