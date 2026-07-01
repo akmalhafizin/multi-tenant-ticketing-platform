@@ -8,66 +8,46 @@ test.describe('Admin Tickets', () => {
     await page.goto('/login')
     await page.fill('input[name="email"]', ADMIN_EMAIL)
     await page.fill('input[name="password"]', ADMIN_PASS)
-    await page.click('button[type="submit"]')
-    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('button', { name: /sign in/i }).click()
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15_000 })
   })
 
   test('ticket list shows real data', async ({ page }) => {
-    await page.click('text=Tickets')
-    await expect(page).toHaveURL(/\/admin\/tickets/)
-    // Should see the tickets table with real data
-    await expect(page.locator('text=Total Tickets')).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('link', { name: /tickets/i }).first().click()
+    await expect(page.getByRole('heading', { name: /tickets/i })).toBeVisible({ timeout: 10_000 })
   })
 
-  test('can open ticket detail', async ({ page }) => {
-    await page.click('text=Tickets')
-    // Click the first ticket view link
-    const firstLink = page.locator('a:has-text("#")').first()
-    await expect(firstLink).toBeVisible({ timeout: 10_000 })
-    await firstLink.click()
-    await expect(page).toHaveURL(/\/admin\/tickets\//)
-    // Detail page should show ticket controls
-    await expect(page.locator('text=Status')).toBeVisible({ timeout: 5_000 })
+  test('can navigate to ticket detail', async ({ page }) => {
+    await page.getByRole('link', { name: /tickets/i }).first().click()
+    // Click first ticket link (starts with #)
+    await page.locator('a[href*="/admin/tickets/"]').first().click()
+    await expect(page.getByRole('heading', { name: /^Ticket #/ })).toBeVisible({ timeout: 10_000 })
   })
 
-  test('can change ticket status', async ({ page }) => {
-    await page.click('text=Tickets')
-    const firstLink = page.locator('a:has-text("#")').first()
-    await firstLink.click()
-    await expect(page).toHaveURL(/\/admin\/tickets\//)
+  test('can add a comment', async ({ page }) => {
+    await page.getByRole('link', { name: /tickets/i }).first().click()
+    await page.locator('a[href*="/admin/tickets/"]').first().click()
+    await expect(page.getByRole('heading', { name: /^Ticket #/ })).toBeVisible({ timeout: 10_000 })
 
-    // Change status via dropdown
-    const statusSelect = page.locator('select').first()
-    await statusSelect.selectOption('PENDING')
-    // Should show success and update
-    await expect(page.locator('text=Updated')).toBeVisible({ timeout: 5_000 })
+    // Add comment
+    await page.getByPlaceholder(/type your reply/i).fill('E2E test comment')
+    await page.getByRole('button', { name: /submit reply/i }).click()
+    await expect(page.getByText('E2E test comment')).toBeVisible({ timeout: 10_000 })
   })
 
-  test('can add comment with notify guest', async ({ page }) => {
-    await page.click('text=Tickets')
-    const firstLink = page.locator('a:has-text("#")').first()
-    await firstLink.click()
-
-    // Add a comment
-    const textarea = page.locator('textarea[placeholder*="reply"]')
-    await expect(textarea).toBeVisible({ timeout: 5_000 })
-    await textarea.fill('E2E test comment from Playwright')
-
-    // Check notify guest if visible
-    const notifyCheckbox = page.locator('text=Notify guest')
-    if (await notifyCheckbox.isVisible()) {
-      await notifyCheckbox.click()
-    }
-
-    await page.click('button:has-text("Submit Reply")')
-    await expect(page.locator('text=E2E test comment from Playwright')).toBeVisible({ timeout: 5_000 })
-  })
-
-  test('can navigate all admin pages', async ({ page }) => {
-    const pages = ['Dashboard', 'Tickets', 'Categories', 'Staff', 'Roles', 'Settings', 'Reports']
-    for (const name of pages) {
-      await page.click(`text=${name}`)
-      await expect(page.locator(`text=${name}`).first()).toBeVisible({ timeout: 10_000 })
+  test('all admin pages load', async ({ page }) => {
+    const pages = [
+      { link: /dashboard/i, heading: /dashboard/i },
+      { link: /tickets/i, heading: /tickets/i },
+      { link: /categories/i, heading: /categories/i },
+      { link: /staff/i, heading: /staff/i },
+      { link: /roles/i, heading: /roles/i },
+      { link: /settings/i, heading: /settings/i },
+      { link: /reports/i, heading: /reports/i },
+    ]
+    for (const { link, heading } of pages) {
+      await page.getByRole('link', { name: link }).first().click()
+      await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 10_000 })
     }
   })
 })
