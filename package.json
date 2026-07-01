@@ -7,5 +7,8 @@
     "test:e2e:ui": "npx playwright test --ui",
     "pretest:e2e": "echo 'Checking services...' && curl -sf http://localhost:3001/ > /dev/null 2>&1 && echo 'API: OK' && curl -sf http://localhost:5173/ > /dev/null 2>&1 && echo 'Frontend: OK' || (echo 'Start services first' && exit 1)",
     "test": "npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
   }
 }
