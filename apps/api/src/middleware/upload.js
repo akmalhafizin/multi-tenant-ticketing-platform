@@ -25,6 +25,9 @@ const upload = multer({
 async function uploadToS3(req, res, next) {
   if (!req.files || req.files.length === 0) return next();
 
+  // Determine org — tenant (public) or authenticated user
+  const orgId = req.tenant?.id || req.user?.organizationId;
+
   try {
     const uploaded = [];
     for (const file of req.files) {
@@ -32,6 +35,7 @@ async function uploadToS3(req, res, next) {
         buffer: file.buffer,
         fileName: file.originalname,
         mimeType: file.mimetype,
+        orgId,
       });
 
       uploaded.push({

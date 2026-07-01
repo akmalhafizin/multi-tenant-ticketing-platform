@@ -41,8 +41,9 @@ async function ensureBucket() {
  * Upload a file buffer to S3/MinIO.
  * @returns {{ key: string, url: string }}
  */
-async function upload({ buffer, fileName, mimeType }) {
-  const key = `${Date.now()}-${Math.round(Math.random() * 1e9)}${fileName.includes(".") ? fileName.substring(fileName.lastIndexOf(".")) : ""}`;
+async function upload({ buffer, fileName, mimeType, orgId }) {
+  const prefix = orgId ? `org_${orgId}/attachments` : "misc";
+  const key = `${prefix}/${Date.now()}-${Math.round(Math.random() * 1e9)}${fileName.includes(".") ? fileName.substring(fileName.lastIndexOf(".")) : ""}`;
 
   await client.send(new PutObjectCommand({
     Bucket: BUCKET,
